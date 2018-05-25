@@ -21,9 +21,15 @@ orocos_use_package(CosimaUtilities-orocos OROCOS_ONLY REQUIRED VERBOSE)
 include_directories(${CosimaUtilities-orocos_INCLUDE_DIRS})
 message(STATUS "COSIMAUTILITIES INCLUDE: ${CosimaUtilities-orocos_INCLUDE_DIRS}")
 
+orocos_use_package(CosimaUtilities OROCOS_ONLY REQUIRED)
+include_directories(${CosimaUtilities_INCLUDE_DIRS})
+message(STATUS "COSIMAUTILITIES INCLUDE: ${CosimaUtilities_INCLUDE_DIRS}")
+
 # add_definitions(-DTIMING)
 
-include_directories(include
+include_directories(
+${PROJECT_SOURCE_DIR}/include
+include
 ${USE_OROCOS_INCLUDE_DIRS}
 ${OROCOS-RTT_INCLUDE_DIRS}
 ${RST-RT_INCLUDE_DIRS})

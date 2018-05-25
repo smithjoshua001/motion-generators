@@ -31,6 +31,7 @@ public:
         velocity.setZero();
         acceleration.resize(this->dof);
         acceleration.setZero();
+        runnable = true;
     }
     JointTrajectory(size_t dof, Eigen::Matrix<T, DOF_C, 1> position) {
         this->dof = dof;
@@ -43,6 +44,7 @@ public:
         velocity.setZero();
         acceleration.resize(this->dof);
         acceleration.setZero();
+        runnable = true;
     }
     virtual ~JointTrajectory() {};
 
@@ -57,9 +59,10 @@ public:
         trajectory.acc.resize(this->dof, simulated_points);
         for (int i = 0; i < simulated_points; i++) {
             // std::cout << ((T)i) / control_frequency << "\n";
-            trajectory.pos.col(i) = this->getPosition(((T)i) / control_frequency);
-            trajectory.vel.col(i) = this->getVelocity(((T)i) / control_frequency);
-            trajectory.acc.col(i) = this->getAcceleration(((T)i) / control_frequency);
+            this->update(((T)i) / control_frequency);
+            trajectory.pos.col(i) = this->getPosition();
+            trajectory.vel.col(i) = this->getVelocity();
+            trajectory.acc.col(i) = this->getAcceleration();
         }
         return trajectory;
     }

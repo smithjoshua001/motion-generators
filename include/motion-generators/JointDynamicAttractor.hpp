@@ -77,7 +77,6 @@ public:
         this->position = state.head(this->dof);
         this->velocity = state.tail(this->dof);
         this->acceleration = state_dot.tail(this->dof);
-        // std::cout<<limit<<std::endl;
         finished = ((state - des_state).cwiseAbs().array() < limit).all();
     }
     T getPeriodLength() {
