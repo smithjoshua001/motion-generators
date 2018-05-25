@@ -20,7 +20,6 @@ private:
     // vector_aa fourier_coeff_a;
     // vector_aa fourier_coeff_b;
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> fourier_coeff_a, fourier_coeff_b;
-    Eigen::Matrix<T, Eigen::Dynamic, 1> joint_offsets;
     Eigen::Matrix<T, Eigen::Dynamic, 6> poly_coeff;
     Eigen::Matrix<T, Eigen::Dynamic, 1> qinit;
 
@@ -31,21 +30,19 @@ private:
     T tf;
     size_t number_of_parameters;
 public:
+    ModifiedFourierTrajectory() : JointTrajectory<T>() {}
     ModifiedFourierTrajectory(size_t dof) : ModifiedFourierTrajectory<T>(dof, 4) {}
     ModifiedFourierTrajectory(size_t dof, size_t coeff_num) : JointTrajectory<T>(dof) {
         gen = std::mt19937(rd());
         real_dist = std::uniform_real_distribution<T>(0, std::nextafter(1, std::numeric_limits<T>::max()));
         global_pulsation = 1.0;
         fourier_coeff_number = coeff_num;
-        joint_offsets.resize(dof);
         fourier_coeff_a.resize(dof, fourier_coeff_number);
         fourier_coeff_b.resize(dof, fourier_coeff_number);
         poly_coeff.resize(dof, 6);
         poly_coeff.Random();
         for (size_t i = 0; i < dof; i++) {
-            joint_offsets[i] = real_dist(gen) * 2 - 1;
             for (size_t j = 0; j < fourier_coeff_number; j++) {
-                T maximum = 2 - std::fabs(joint_offsets[i]);
                 fourier_coeff_a(i, j) = real_dist(gen);
                 fourier_coeff_b(i, j) = real_dist(gen);
             }
@@ -99,7 +96,48 @@ public:
         }
     }
 
-    Eigen::Matrix<T, Eigen::Dynamic, 1> const &getPosition(double time = 0) override {
+    // Eigen::Matrix<T, Eigen::Dynamic, 1> const &getPosition(double time = 0) override {
+    //     assert(this->runnable);
+    //     this->position.setZero();
+    //     for (size_t j = 1; j <= fourier_coeff_number; j++) {
+    //         this->position += (fourier_coeff_a.col(j - 1) / (global_pulsation * j)) * std::sin(global_pulsation * j * time) -
+    //                           (fourier_coeff_b.col(j - 1) / (global_pulsation * j)) * std::cos(global_pulsation * j * time);
+    //     }
+    //     for (size_t k = 0; k < 6; k++) {
+    //         this->position += poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k);
+    //     }
+    //     return this->position;
+    // }
+    // Eigen::Matrix<T, Eigen::Dynamic, 1> const &getVelocity(double time = 0) override {
+    //     assert(this->runnable);
+    //     this->velocity.setZero();
+    //     for (size_t i = 0; i < this->dof; i++) {
+    //         for (size_t j = 1; j <= fourier_coeff_number; j++) {
+    //             this->velocity[i] += (fourier_coeff_a(i, j - 1)) * std::cos(global_pulsation * j * time) +
+    //                                  (fourier_coeff_b(i, j - 1)) * std::sin(global_pulsation * j * time);
+    //         }
+    //     }
+    //     for (size_t k = 1; k < 6; k++) {
+    //         this->velocity += k * poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k - 1);
+    //     }
+    //     return this->velocity;
+    // }
+    // Eigen::Matrix<T, Eigen::Dynamic, 1> const &getAcceleration(double time = 0) override {
+    //     assert(this->runnable);
+    //     this->acceleration.setZero();
+    //     for (size_t i = 0; i < this->dof; i++) {
+    //         for (size_t j = 1; j <= fourier_coeff_number; j++) {
+    //             this->acceleration[i] += -(fourier_coeff_a(i, j - 1) * (global_pulsation * j)) * std::sin(global_pulsation * j * time) +
+    //                                      (fourier_coeff_b(i, j - 1) * (global_pulsation * j)) * std::cos(global_pulsation * j * time);
+    //         }
+    //     }
+    //     for (size_t k = 2; k < 6; k++) {
+    //         this->acceleration += (k - 1) * k * poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k - 2);
+    //     }
+    //     return this->acceleration;
+    // }
+    void update(double time = 0) override {
+        assert(this->runnable);
         this->position.setZero();
         for (size_t j = 1; j <= fourier_coeff_number; j++) {
             this->position += (fourier_coeff_a.col(j - 1) / (global_pulsation * j)) * std::sin(global_pulsation * j * time) -
@@ -108,9 +146,6 @@ public:
         for (size_t k = 0; k < 6; k++) {
             this->position += poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k);
         }
-        return this->position;
-    }
-    Eigen::Matrix<T, Eigen::Dynamic, 1> const &getVelocity(double time = 0) override {
         this->velocity.setZero();
         for (size_t i = 0; i < this->dof; i++) {
             for (size_t j = 1; j <= fourier_coeff_number; j++) {
@@ -121,9 +156,6 @@ public:
         for (size_t k = 1; k < 6; k++) {
             this->velocity += k * poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k - 1);
         }
-        return this->velocity;
-    }
-    Eigen::Matrix<T, Eigen::Dynamic, 1> const &getAcceleration(double time = 0) override {
         this->acceleration.setZero();
         for (size_t i = 0; i < this->dof; i++) {
             for (size_t j = 1; j <= fourier_coeff_number; j++) {
@@ -134,7 +166,6 @@ public:
         for (size_t k = 2; k < 6; k++) {
             this->acceleration += (k - 1) * k * poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k - 2);
         }
-        return this->acceleration;
     }
     void setGlobalPulsation(T global_pulse) {
         global_pulsation = global_pulse;
@@ -146,10 +177,6 @@ public:
     size_t getFourierCoefficientNumber() {
         return this->fourier_coeff_number;
     }
-    void setJointOffsets(Eigen::Matrix<T, Eigen::Dynamic, 1> &joint_offsets) {
-        this->joint_offsets = joint_offsets;
-    }
-
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> getFourierCoefficientsA() {
         return fourier_coeff_a;
     }
@@ -174,7 +201,7 @@ public:
         return number_of_parameters;
     }
 
-    void loadFromJSON(std::string filename) {
+    void loadFromJSON(std::string filename) override {
         std::ifstream ifs(filename);
         rapidjson::IStreamWrapper isw(ifs);
         rapidjson::Document doc;
@@ -184,6 +211,8 @@ public:
             exit(-2);
         }
         global_pulsation = T(doc["frequency"].GetDouble());
+        this->dof = T(doc["dof"].GetInt());
+        this->JointTrajectory<T>::setDof(this->dof);
         fourier_coeff_number = doc["coefficient_number"].GetInt();
         fourier_coeff_a.resize(this->dof, fourier_coeff_number);
         fourier_coeff_b.resize(this->dof, fourier_coeff_number);
@@ -193,7 +222,10 @@ public:
                 fourier_coeff_b(j, i) = T(doc["coefficient_b"][i + j * fourier_coeff_number ].GetDouble());
             }
         }
+        poly_coeff.resize(this->dof, 6);
         convert_to_coeffcients();
+        number_of_parameters = fourier_coeff_number * this->dof * 2 + 1;
+        this->runnable = true;
     }
 
     void saveToJSON(std::string filename) {
@@ -202,6 +234,8 @@ public:
         rapidjson::Document::AllocatorType &allocator = d.GetAllocator();
         rapidjson::Value global_pulse(global_pulsation);
         rapidjson::Value fourier_coeff_num(fourier_coeff_number);
+        rapidjson::Value dof(this->dof);
+        d.AddMember("dof", dof, allocator);
         d.AddMember("frequency", global_pulse, allocator);
         d.AddMember("coefficient_number", fourier_coeff_num, allocator);
         rapidjson::Value a(rapidjson::kArrayType);
