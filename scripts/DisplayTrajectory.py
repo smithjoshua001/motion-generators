@@ -47,9 +47,6 @@ def main():
                                          * control_rate)), 3, 3))
     collision = False
     adjv = DynamicsLib.AdjointVector(chain.getNumOfLinks())
-    # np.set_printoptions(threshold=np.nan, suppress=True)
-    # print trajectory_data.pos.T
-    # exit(1)
     for k in range(0, int(ceil(trajModel.getPeriodLength() * control_rate))):
         q = trajectory_data.pos[:, k].copy().T
 
@@ -59,7 +56,6 @@ def main():
 
         trajModel.getPeriodLength()
 
-        print(q)
         chain.updateChainPos(q)
         chain.updateChainVel(qd)
 

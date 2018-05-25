@@ -12,36 +12,30 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
 
     def __init__(self, TrajModel, Chain, config):
         super(ModifiedFourierTrajectoryOptimzerOptim, self).__init__(config)
-        print('Debug 1')
         self.TrajModel = TrajModel
         self.Chain = Chain
         self.dof = Chain.getNumOfJoints()
-        print('Debug 2')
         self.limits = DynamicsLib.LimitsVector(self.dof)
         self.Chain.getJointLimits(self.limits)
-        print('Debug 3')
         self.CF = RegressorCostFunction.RegressorCostFunction_d(self.Chain)
-
-        print('Debug 4')
         self.nf = [TrajModel.getFourierCoefficientNumber()] * self.dof
 
         self.velocity_limit = self.config['velLimit']
         self.acc_limit = self.config['accLimit']
         self.torque_limit = self.config['torqueLimit']
-        print('Debug 5')
         self.wf_min = self.config['trajectoryPulseMin']
         self.wf_max = self.config['trajectoryPulseMax']
         self.wf_init = self.config['trajectoryPulseInit']
 
         self.max_pos = self.config['max_pos']
         self.min_pos = self.config['min_pos']
-        print('Debug 6')
+
         self.amin = self.bmin = self.config['trajectoryCoeffMin']
         self.amax = self.bmax = self.config['trajectoryCoeffMax']
 
         self.last_best_f_f1 = 0
         self.num_constraints = 0
-        print('Debug 7')
+
         if(self.config['joint_limit_constraint']):
             self.num_constraints += self.dof * 2
         if(self.config['velocity_limit_constraint']):
@@ -56,7 +50,6 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
         if(self.config['collision_constraints']):
             self.collision_constraints_index = self.num_constraints
             self.num_constraints += 1  # FK.number_of_collision_checks()
-        print('Debug 8')
 
     def vecToParams(self, x):
         # convert vector of all solution variables to separate parameter
@@ -117,12 +110,7 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
             (self.dof * int(ceil(self.TrajModel.getPeriodLength() * self.config['controlRate'])), self.CF.getNumOfBaseParams() + 2 * self.dof), dtype='float64')
         self.CF.compute(trajectory_data, q_discrete, qd_discrete,
                         qdd_discrete, FK_discrete, self.regressor, collision)
-        # print (np.matrix(self.regressor).T * np.matrix(self.regressor)).shape
-        # print np.linalg.eig((np.matrix(self.regressor).T *
-        # np.matrix(self.regressor)))
-
         # input, &q_out, &qd_out, &qdd_out, &fk_pos_out, &regressor, &collision
-
         # f = np.linalg.norm(self.regressor) * np.linalg.norm(
         #     np.linalg.pinv(self.regressor))
         f = np.linalg.cond(self.regressor, p=-2)
