@@ -8,6 +8,7 @@
 %include <typemaps.i>
 %include <std_vector.i>
 %include <eigen.i>
+%include <std_string.i>
 
 %eigen_typemaps(Eigen::VectorXd)
 %eigen_typemaps(Eigen::MatrixXd)
@@ -19,5 +20,7 @@
 
 %template(SizeVector) std::vector<size_t>;
 %template(CoeffecientVector) std::vector<Eigen::Matrix<double,Eigen::Dynamic,1>,Eigen::aligned_allocator<Eigen::Matrix<double,Eigen::Dynamic,1>>>;
+
+%template(Trajectory_d) Trajectory<double>;
 %template(JointTrajectory_d) JointTrajectory<double>;
 %template(ModifiedFourierTrajectory_d) ModifiedFourierTrajectory<double>;

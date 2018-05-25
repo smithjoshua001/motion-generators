@@ -22,9 +22,15 @@ include_directories(BEFORE SYSTEM ${RST-RT_INCLUDE_DIRS})
 add_definitions(${RST-RT_CFLAGS})
 link_directories(${RST-RT_LIBRARY_DIR} ${RST-RT_LIBRARY_DIRS})
 
+orocos_use_package(CosimaUtilities OROCOS_ONLY REQUIRED)
+include_directories(${CosimaUtilities_INCLUDE_DIRS})
+message(STATUS "COSIMAUTILITIES INCLUDE: ${CosimaUtilities_INCLUDE_DIRS}")
+
 # add_definitions(-DTIMING)
 
-include_directories(include
+include_directories(
+${PROJECT_SOURCE_DIR}/include
+include
 ${USE_OROCOS_INCLUDE_DIRS}
 ${OROCOS-RTT_INCLUDE_DIRS}
 ${RST-RT_INCLUDE_DIRS})
@@ -46,6 +52,7 @@ list(APPEND DEPENDENCY_LIBRARIES ${OROCOS-RTT_LIBRARIES} ${OROCOS-RTT_RTT-SCRIPT
 orocos_component(RTT_${CMAKE_PROJECT_NAME}
 ${PROJECT_SOURCE_DIR}/orocos/src/DynamicAttractor.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/TaskDynamicAttractor.cpp
+${PROJECT_SOURCE_DIR}/orocos/src/ModifiedFourierTrajectoryOrocos.cpp
 ) # ...you may add multiple source files
 
 set_target_properties(RTT_${CMAKE_PROJECT_NAME} PROPERTIES COMPILE_DEFINITIONS RTT_COMPONENT)
