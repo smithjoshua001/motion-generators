@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>motion_generators</name>
+  <version>0.2.0</version>
+  <description>The MotionGenerators package</description>
+  <maintainer email="smithjoshua001@aol.co.uk">Joshua Smith</maintainer>
+  <author email="smithjoshua001@aol.co.uk">Joshua Smith</author>
+  <license>Proprietary</license>
+  <url type="website">https://bitbucket.org/mistrygroup/MotionGenerators</url>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>quadruped_model</depend>
+  <depend>quadruped_description</depend>
+  <depend>loco</depend>
+<depend>loco_ros_quadruped</depend>
+<depend>parameter_handler</depend>
+<depend>anymal_msgs</depend>
+<depend>kindr_ros</depend>
+<depend>roscpp</depend>
+<depend>std_msgs</depend>
+<depend>geometry_msgs</depend>
+<depend>robot_state_publisher</depend>
+<depend>tf2_ros</depend>
+<depend>kindr</depend>
+<depend>tf2_geometry_msgs</depend>
+<depend>tf2</depend>
+<depend>sensor_msgs</depend>
+</package>

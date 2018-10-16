@@ -6,15 +6,15 @@ include(SwigPython)
 add_swig_python_module(PulsatingJointTrajectory PulsatingJointTrajectory.i
                        CPLUSPLUS
                        INCLUDE_DIRS ${DEPENDENCY_INCLUDE_DIRS}
-                       #LINK_LIBRARIES inverter
+                       LINK_LIBRARIES ${json11_LIBRARIES}
                        SWIG_INCLUDE_DIRS ${SWIG_DIR}/../python ${SWIG_DIR}/../common
 DESTINATION ${CMAKE_INSTALL_LIBDIR}/python2.7/site-packages/)
 add_swig_python_module(ModifiedFourierTrajectory ModifiedFourierTrajectory.i
                        CPLUSPLUS
                        INCLUDE_DIRS ${DEPENDENCY_INCLUDE_DIRS}
-                       #LINK_LIBRARIES inverter
+                       LINK_LIBRARIES ${json11_LIBRARIES}
                        SWIG_INCLUDE_DIRS ${SWIG_DIR}/../python ${SWIG_DIR}/../common
-DESTINATION ${CMAKE_INSTALL_LIBDIR}/python2.7/site-packages/)
+DESTINATION ${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages/ModifiedFourierTrajectory)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(DynamicsLib DynamicsLib)

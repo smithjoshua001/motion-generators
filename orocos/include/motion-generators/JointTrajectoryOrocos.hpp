@@ -8,9 +8,10 @@
 #include <rst-rt/kinematics/JointVelocities.hpp>
 #include <rst-rt/kinematics/JointAccelerations.hpp>
 #include <CosimaUtilities/Timing.hpp>
+#include <memory>
 
 class JointTrajectoryOrocos {
-private:
+protected:
     RTT::TaskContext *task;
 
     size_t dof;
@@ -33,12 +34,20 @@ public:
         task->addOperation("loadFromJSON", &JointTrajectoryOrocos::loadFromJSON, this);
     }
 
-    virtual void loadFromJSON(std::string filename) {
+    void loadFromJSON(std::string filename) {
+        std::cout << "LOAD FROM JSON!" << std::endl;
+        if (!trajectory) {
+            std::cout << "NO TRAJECTORY!" << std::endl;
+        } else {
+            std::cout << "TRAJECTORY!!" << std::endl;
+        }
         trajectory->loadFromJSON(filename);
+        std::cout << "LOADED!" << std::endl;
         this->dof = trajectory->getDof();
     }
 
-    virtual bool preparePorts() {
+    bool preparePorts() {
+        task->ports()->clear();
         out_position_var = rstrt::kinematics::JointAngles(dof);
         out_velocity_var = rstrt::kinematics::JointVelocities(dof);
         out_acceleration_var = rstrt::kinematics::JointAccelerations(dof);
@@ -82,5 +91,9 @@ public:
         out_position_port.write(out_position_var);
         out_velocity_port.write(out_velocity_var);
         out_acceleration_port.write(out_acceleration_var);
+    }
+
+    std::shared_ptr<JointTrajectory<float> > getTrajectory() {
+        return trajectory;
     }
 };

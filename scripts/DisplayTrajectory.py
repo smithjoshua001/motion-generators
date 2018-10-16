@@ -21,13 +21,13 @@ def main():
     dyn = DynamicsLib.ForwardDynamics_d(chain)
 
     trajModel = ModifiedFourierTrajectory.ModifiedFourierTrajectory_d(
-        chain.getNumOfJoints(), 6)
+        chain.getNumOfJoints())
     ifile = str(args.ifile)
     trajModel.loadFromJSON(ifile)
     # params = np.zeros(trajModel.getNumberOfParameters())
 
     control_rate = 100
-    dof = 7
+    dof = chain.getNumOfJoints()
     import matplotlib.pyplot as plt
     import mpl_toolkits.mplot3d as mplot3d
     from mpl_toolkits.mplot3d import Axes3D
@@ -47,6 +47,9 @@ def main():
                                          * control_rate)), 3, 3))
     collision = False
     adjv = DynamicsLib.AdjointVector(chain.getNumOfLinks())
+    # np.set_printoptions(threshold=np.nan, suppress=True)
+    # print trajectory_data.pos.T
+    # exit(1)
     for k in range(0, int(ceil(trajModel.getPeriodLength() * control_rate))):
         q = trajectory_data.pos[:, k].copy().T
 
@@ -56,7 +59,7 @@ def main():
 
         trajModel.getPeriodLength()
 
-        # print(q)
+        print(q)
         chain.updateChainPos(q)
         chain.updateChainVel(qd)
 
@@ -68,34 +71,69 @@ def main():
         for i in range(0, chain.getNumOfLinks()):
             FK_discrete[i, k, :] = adjv[i].getP().T
             FK_rot_discrete[i, k, :, :] = adjv[i].getR()
-    i = chain.getNumOfLinks()-1
+    i = chain.getNumOfLinks() - 1
     ax.plot(FK_discrete[i, :, 0],
             FK_discrete[i, :, 1], FK_discrete[i, :, 2], label=i, marker='o', linewidth=2.0, markevery=100)
+    ax.plot(FK_discrete[i - 1, :, 0],
+            FK_discrete[i - 1, :, 1], FK_discrete[i - 1, :, 2], label=i, marker='o', linewidth=2.0, markevery=100)
 
     from stl import mesh
+    import pymesh
     import math
     from copy import copy, deepcopy
 
     polies = []
     meshes = []
+    prev = np.array([0, 0, 0])
+    links = chain.getLinksRef()
     for i in range(0, chain.getNumOfLinks()):
         filename = chain.getCollisionFile(i)
-
+        print i
         if(filename != ""):
-            your_mesh = mesh.Mesh.from_file(chain.getCollisionFile(i))
-            meshes.append(mesh.Mesh.from_file(chain.getCollisionFile(i)))
-            if(i != chain.getNumOfLinks()):
-                for j in range(3):
-                    your_mesh.vectors[:, j] = your_mesh.vectors[:, j].dot(
-                        FK_rot_discrete[i, 0, :, :])
+            if(filename == "CYLINDER"):
 
-                your_mesh.translate(FK_discrete[i, 0, :])
-                pol = mplot3d.art3d.Poly3DCollection(
-                    your_mesh.vectors)
-                polies.append(pol)
-                ax.add_collection3d(pol)
+                # need to do work on
+                # ax.plot([FK_discrete[i-1, 0, 0], FK_discrete[i, 0, 0]],
+                # [FK_discrete[i-1, 0, 1], FK_discrete[i, 0, 1]],
+                # zs=[FK_discrete[i-1, 0, 2], FK_discrete[i, 0, 2]])
+                print 'CYL!'
+
+                your_mesh = pymesh.generate_cylinder(np.array([0, 0, 0]),
+                                                     np.array([0, 0, links[i].getLength()]), links[i].getRadius(), links[i].getRadius())
+                # if(i + 1 != chain.getNumOfLinks()):
+                #     your_mesh = pymesh.generate_cylinder(
+                # FK_discrete[i, 0, :], FK_discrete[i + 1, 0, :], 0.05, 0.05)
+                pymesh.save_mesh('.tmp.stl', your_mesh)
+                your_mesh = mesh.Mesh.from_file('.tmp.stl')
+                meshes.append(mesh.Mesh.from_file('.tmp.stl'))
+                if(i != chain.getNumOfLinks()):
+                    for j in range(3):
+                        your_mesh.vectors[:, j] = your_mesh.vectors[:, j].dot(
+                            FK_rot_discrete[i, 0, :, :])
+
+                    your_mesh.translate(FK_discrete[i, 0, :])
+                    print FK_discrete[i, 0, :]
+                    pol = mplot3d.art3d.Poly3DCollection(
+                        your_mesh.vectors)
+                    polies.append(pol)
+                    ax.add_collection3d(pol)
+
+            else:
+                your_mesh = mesh.Mesh.from_file(chain.getCollisionFile(i))
+                meshes.append(mesh.Mesh.from_file(chain.getCollisionFile(i)))
+                if(i != chain.getNumOfLinks()):
+                    for j in range(3):
+                        your_mesh.vectors[:, j] = your_mesh.vectors[:, j].dot(
+                            FK_rot_discrete[i, 0, :, :])
+
+                    your_mesh.translate(FK_discrete[i, 0, :])
+                    pol = mplot3d.art3d.Poly3DCollection(
+                        your_mesh.vectors)
+                    polies.append(pol)
+                    ax.add_collection3d(pol)
 
     class animation(object):
+
         def __init__(self, ax, polies, meshes):
             self.ax = ax
             self.ax.set_xlim(-1, 1)

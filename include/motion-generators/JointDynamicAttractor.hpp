@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <Eigen/Dense>
-#include <CosimaUtilities/Timing.hpp>
+#include "motion-generators/JointTrajectory.hpp"
 
 template <typename T> class JointDynamicAttractor : public JointTrajectory<T> {
 public:
@@ -9,9 +9,9 @@ public:
         prev_time = 0;
         sim_period = -1;
         finished = true;
+        limit = 0.001;
     }
     JointDynamicAttractor(size_t dof) : JointTrajectory<T>(dof) {
-        this->DOF = dof;
         gainMatrix.resize(dof * 2, dof * 2);
         gainMatrix.setZero();
         state.resize(dof * 2);
@@ -39,13 +39,13 @@ public:
     }
 
     void setGain(T gain) {
-        gainMatrix.block(0, DOF, DOF, DOF).setIdentity();
+        gainMatrix.block(0, this->dof, this->dof, this->dof).setIdentity();
 
-        gainMatrix.block(DOF, 0, DOF, DOF).setIdentity();
-        gainMatrix.block(DOF, 0, DOF, DOF) *= -gain * gain;
+        gainMatrix.block(this->dof, 0, this->dof, this->dof).setIdentity();
+        gainMatrix.block(this->dof, 0, this->dof, this->dof) *= -gain * gain;
 
-        gainMatrix.block(DOF, DOF, DOF, DOF).setIdentity();
-        gainMatrix.block(DOF, DOF, DOF, DOF) *= -2 * gain;
+        gainMatrix.block(this->dof, this->dof, this->dof, this->dof).setIdentity();
+        gainMatrix.block(this->dof, this->dof, this->dof, this->dof) *= -2 * gain;
     }
 
     void setSimulationPeriod(T sim_period) {
@@ -74,27 +74,28 @@ public:
         prev_time = time;
         state_dot = gainMatrix * (state - des_state);
         state = state + state_dot * diff_time;
-        this->position = state.head(DOF);
-        this->velocity = state.tail(DOF);
-        this->acceleration = state_dot.tail(DOF);
-        finished = (state - des_state).cwiseAbs().norm() < 0.001;
+        this->position = state.head(this->dof);
+        this->velocity = state.tail(this->dof);
+        this->acceleration = state_dot.tail(this->dof);
+        // std::cout<<limit<<std::endl;
+        finished = ((state - des_state).cwiseAbs().array() < limit).all();
     }
     T getPeriodLength() {
         return sim_period;
     };
 
     void loadFromJSON(std::string filename) override {
-        std::ifstream ifs(filename);
-        rapidjson::IStreamWrapper isw(ifs);
-        rapidjson::Document doc;
-        doc.ParseStream(isw);
-        if (!doc.IsObject()) {
-            std::cerr << "Config File: " << filename << " does not exist for JointDynamicAttractor" << std::endl;
-            exit(-2);
-        }
-        this->dof = T(doc["dof"].GetInt());
+        JointTrajectory<T>::loadFromJSON(filename);
+        // RAPIDJSON_NAMESPACE::Document doc;
+        // this->dof = T(doc["dof"].GetInt());
+        // setDof(this->dof);
+        // T gain = T(doc["gain"].GetDouble());
+        // setGain(gain);
+
+        // this->runnable = true;
+        this->dof = this->json["dof"].number_value();
         setDof(this->dof);
-        T gain = T(doc["gain"].GetDouble());
+        T gain = T(this->json["gain"].number_value());
         setGain(gain);
 
         this->runnable = true;
@@ -102,11 +103,15 @@ public:
 
     bool finished;
 
+    void setLimit(T limit) {
+        this->limit = limit;
+    }
+
 private:
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> gainMatrix;
     Eigen::Matrix<T, Eigen::Dynamic, 1> state, state_dot;
     Eigen::Matrix<T, Eigen::Dynamic, 1> des_state;
-    size_t DOF;
     double prev_time, diff_time;
     T sim_period;
+    T limit;
 };
