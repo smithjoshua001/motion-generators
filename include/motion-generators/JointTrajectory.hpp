@@ -4,26 +4,26 @@
 #include <tuple>
 #include <iostream>
 
-template <typename T> struct Trajectory {
-    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, vel, acc;
-    Trajectory(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> vel, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> acc) {
-        this->pos = pos;
-        this->vel = vel;
-        this->acc = acc;
-    }
-    Trajectory() {}
-};
+// #define rapidjson my::rapid::json
+// #define rapidjson_BEGIN namespace my { namespace rapid { namespace json {
+// #define rapidjson_END } } }
 
-template <typename T> class JointTrajectory {
+#include <fstream>
+#include <memory>
+#include <string>
+#include <streambuf>
+#include <json11.hpp>
+
+#include "motion-generators/Trajectory.hpp"
+
+template <typename T, int DOF_C = -1> class JointTrajectory : Trajectory<T, DOF_C, DOF_C, DOF_C> {
 protected:
     size_t dof;
-    Eigen::Matrix<T, Eigen::Dynamic, 1> position;
-    Eigen::Matrix<T, Eigen::Dynamic, 1> velocity;
-    Eigen::Matrix<T, Eigen::Dynamic, 1> acceleration;
-    Trajectory<T> trajectory;
 public:
 
-    JointTrajectory(size_t dof) {
+    JointTrajectory() : Trajectory<T, DOF_C, DOF_C, DOF_C>() {}
+
+    JointTrajectory(size_t dof) : Trajectory<T, DOF_C, DOF_C, DOF_C>() {
         this->dof = dof;
         position.resize(this->dof);
         position.setZero();
@@ -32,7 +32,7 @@ public:
         acceleration.resize(this->dof);
         acceleration.setZero();
     }
-    JointTrajectory(size_t dof, Eigen::Matrix<T, Eigen::Dynamic, 1> position) {
+    JointTrajectory(size_t dof, Eigen::Matrix<T, DOF_C, 1> position) {
         this->dof = dof;
         if (position.size() != dof) {
             throw std::runtime_error("Position dof size does not match the input dof size");
@@ -45,12 +45,11 @@ public:
         acceleration.setZero();
     }
     virtual ~JointTrajectory() {};
-    virtual Eigen::Matrix<T, Eigen::Dynamic, 1> const &getPosition(double time = 0) = 0;
-    virtual Eigen::Matrix<T, Eigen::Dynamic, 1> const &getVelocity(double time = 0) = 0;
-    virtual Eigen::Matrix<T, Eigen::Dynamic, 1> const &getAcceleration(double time = 0) = 0;
-    virtual T getPeriodLength() = 0;
 
-    Trajectory<T> simulate(T control_frequency) {
+    TrajectoryStorage<T> simulate(T control_frequency) {
+        assert(runnable);
+        //TODO better solution
+        assert(this->getPeriodLength() > 0 && "Invalid Trajectory to simulate");
         int simulated_points = std::ceil(this->getPeriodLength() * control_frequency);
         // Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, vel, acc;
         trajectory.pos.resize(this->dof, simulated_points);
@@ -64,4 +63,23 @@ public:
         }
         return trajectory;
     }
+        
+    size_t getDof() {
+        return dof;
+    }
+    virtual void setDof(size_t dof) {
+
+        this->dof = dof;
+        velocity.resize(this->dof);
+        position.resize(this->dof);
+        acceleration.resize(this->dof);
+        position.setZero();
+        acceleration.setZero();
+        velocity.setZero();
+    }
+    virtual void loadFromJSON(std::string filename) {
+        Trajectory<T, pos_dim, vel_dim, acc_dim>::loadFromJSON(filename);
+        this->setDof(json["dof"].int_value());
+    }
+        
 };
