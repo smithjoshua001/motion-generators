@@ -55,7 +55,7 @@ if(${DynamicsLib_FOUND})
     add_swig_python_module(RegressorCostFunction RegressorCostFunction.i
                         CPLUSPLUS
                         INCLUDE_DIRS "${DEPENDENCY_INCLUDE_DIRS};${DynamicsLib_INCLUDE_DIRS};${CMAKE_CURRENT_SOURCE_DIR}/include"
-                        LINK_LIBRARIES ${DynamicsLibraries}
+                        LINK_LIBRARIES ${DynamicsLibraries} ${json11_LIBRARIES}
                         SWIG_INCLUDE_DIRS ${SWIG_DIR}/../python ${SWIG_DIR}/../common
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/python2.7/site-packages/)
 
