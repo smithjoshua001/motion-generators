@@ -5,11 +5,11 @@
 #include <cmath>
 #include <iostream>
 #include <Eigen/StdVector>
+
 #include <rapidjson/document.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
-#include <fstream>
 
 template <typename T> class ModifiedFourierTrajectory : public JointTrajectory<T> {
 // public:
@@ -202,28 +202,53 @@ public:
     }
 
     void loadFromJSON(std::string filename) override {
-        std::ifstream ifs(filename);
-        rapidjson::IStreamWrapper isw(ifs);
-        rapidjson::Document doc;
-        doc.ParseStream(isw);
-        if (!doc.IsObject()) {
-            std::cerr << "Config File: " << filename << " does not exist for ModifiedFourierTrajectory" << std::endl;
-            exit(-2);
-        }
-        global_pulsation = T(doc["frequency"].GetDouble());
-        this->dof = T(doc["dof"].GetInt());
+        JointTrajectory<T>::loadFromJSON(filename);
+        // std::cout << "LOAD" << std::endl;
+        // rapidjson::Document doc;
+        // std::cout << "LOAD 1" << std::endl;
+        // global_pulsation = T(doc["frequency"].GetDouble());
+        // this->dof = T(doc["dof"].GetInt());
+        // std::cout << "LOAD2 " << this->dof << std::endl;
+        // this->JointTrajectory<T>::setDof(this->dof);
+
+        // std::cout << "LOAD3" << std::endl;
+        // fourier_coeff_number = doc["coefficient_number"].GetInt();
+        // std::cout << "LOAD4" << std::endl;
+        // fourier_coeff_a.resize(this->dof, fourier_coeff_number);
+        // fourier_coeff_b.resize(this->dof, fourier_coeff_number);
+        // for (int j = 0; j < this->dof; j++) {
+        //     for (int i = 0; i < fourier_coeff_number; i++) {
+        //         fourier_coeff_a(j, i) = T(doc["coefficient_a"][i + j * fourier_coeff_number].GetDouble());
+        //         fourier_coeff_b(j, i) = T(doc["coefficient_b"][i + j * fourier_coeff_number ].GetDouble());
+        //     }
+        // }
+        // poly_coeff.resize(this->dof, 6);
+        // convert_to_coeffcients();
+        // number_of_parameters = fourier_coeff_number * this->dof * 2 + 1;
+        // this->runnable = true;
+        std::cout << "LOAD" << std::endl;
+        global_pulsation = T(this->json["frequency"].number_value());
+        std::cout << "LOAD1 " << this->json["dof"].int_value() << std::endl;
+        this->dof = this->json["dof"].int_value();
+        qinit = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(this->dof);
         this->JointTrajectory<T>::setDof(this->dof);
-        fourier_coeff_number = doc["coefficient_number"].GetInt();
+        std::cout << "LOAD2" << std::endl;
+        fourier_coeff_number = this->json["coefficient_number"].int_value();
+        std::cout << "LOAD3" << std::endl;
         fourier_coeff_a.resize(this->dof, fourier_coeff_number);
         fourier_coeff_b.resize(this->dof, fourier_coeff_number);
+        std::cout << "LOAD4" << std::endl;
         for (int j = 0; j < this->dof; j++) {
             for (int i = 0; i < fourier_coeff_number; i++) {
-                fourier_coeff_a(j, i) = T(doc["coefficient_a"][i + j * fourier_coeff_number].GetDouble());
-                fourier_coeff_b(j, i) = T(doc["coefficient_b"][i + j * fourier_coeff_number ].GetDouble());
+                fourier_coeff_a(j, i) = T(this->json["coefficient_a"][i + j * fourier_coeff_number].number_value());
+                fourier_coeff_b(j, i) = T(this->json["coefficient_b"][i + j * fourier_coeff_number ].number_value());
             }
         }
+        std::cout << "LOAD5" << std::endl;
         poly_coeff.resize(this->dof, 6);
+        std::cout << "LOAD6" << std::endl;
         convert_to_coeffcients();
+        std::cout << "LOAD7" << std::endl;
         number_of_parameters = fourier_coeff_number * this->dof * 2 + 1;
         this->runnable = true;
     }
@@ -253,8 +278,9 @@ public:
         rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
         writer.SetFormatOptions(rapidjson::PrettyFormatOptions::kFormatSingleLineArray);
         d.Accept(writer);
-        writer.Flush();
+        // writer.Flush();
         ofs.flush();
+        ofs.close();
     }
 
     void display() {
