@@ -65,23 +65,21 @@ public:
         }
         return trajectory;
     }
-        
     size_t getDof() {
         return dof;
     }
-    virtual void setDof(size_t dof) {
 
+    virtual void setDof(size_t dof) {
         this->dof = dof;
-        velocity.resize(this->dof);
         position.resize(this->dof);
+        velocity.resize(this->dof);
         acceleration.resize(this->dof);
         position.setZero();
-        acceleration.setZero();
         velocity.setZero();
+        acceleration.setZero();
     }
     virtual void loadFromJSON(std::string filename) {
         Trajectory<T, pos_dim, vel_dim, acc_dim>::loadFromJSON(filename);
         this->setDof(json["dof"].int_value());
     }
-        
 };
