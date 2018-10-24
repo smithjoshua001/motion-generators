@@ -31,7 +31,6 @@ public:
         velocity.setZero();
         acceleration.resize(this->dof);
         acceleration.setZero();
-        runnable = true;
     }
     JointTrajectory(size_t dof, Eigen::Matrix<T, DOF_C, 1> position) {
         this->dof = dof;
@@ -70,6 +69,7 @@ public:
     size_t getDof() {
         return dof;
     }
+
     virtual void setDof(size_t dof) {
 
         this->dof = dof;
@@ -84,5 +84,4 @@ public:
         Trajectory<T, pos_dim, vel_dim, acc_dim>::loadFromJSON(filename);
         this->setDof(json["dof"].int_value());
     }
-        
 };
