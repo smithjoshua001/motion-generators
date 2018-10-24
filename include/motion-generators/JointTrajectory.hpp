@@ -31,7 +31,6 @@ public:
         velocity.setZero();
         acceleration.resize(this->dof);
         acceleration.setZero();
-        runnable = true;
     }
     JointTrajectory(size_t dof, Eigen::Matrix<T, DOF_C, 1> position) {
         this->dof = dof;
