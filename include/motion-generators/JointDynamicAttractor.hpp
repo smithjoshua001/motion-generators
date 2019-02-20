@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <Eigen/Dense>
+#include <CosimaUtilities/Timing.hpp>
 #include "motion-generators/JointTrajectory.hpp"
 
 template <typename T> class JointDynamicAttractor : public JointTrajectory<T> {
@@ -77,6 +78,7 @@ public:
         this->position = state.head(this->dof);
         this->velocity = state.tail(this->dof);
         this->acceleration = state_dot.tail(this->dof);
+        // std::cout<<limit<<std::endl;
         finished = ((state - des_state).cwiseAbs().array() < limit).all();
     }
     T getPeriodLength() {
@@ -102,7 +104,7 @@ public:
 
     bool finished;
 
-    void setLimit(T limit) {
+    void setLimit(T limit){
         this->limit = limit;
     }
 

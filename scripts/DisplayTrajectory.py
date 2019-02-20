@@ -59,6 +59,7 @@ def main():
 
         trajModel.getPeriodLength()
 
+        print(q)
         chain.updateChainPos(q)
         chain.updateChainVel(qd)
 

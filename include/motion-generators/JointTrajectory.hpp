@@ -14,11 +14,34 @@
 #include <streambuf>
 #include <json11.hpp>
 
+template <typename T> struct Trajectory {
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, vel, acc;
+    Trajectory(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> vel, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> acc) {
+        this->pos = pos;
+        this->vel = vel;
+        this->acc = acc;
+    }
+    Trajectory() {}
+};
+
+#include <fstream>
+#include <memory>
+#include <string>
+#include <streambuf>
+#include <json11.hpp>
+
 #include "motion-generators/Trajectory.hpp"
 
 template <typename T, int DOF_C = -1> class JointTrajectory : Trajectory<T, DOF_C, DOF_C, DOF_C> {
 protected:
     size_t dof;
+    Eigen::Matrix<T, Eigen::Dynamic, 1> position;
+    Eigen::Matrix<T, Eigen::Dynamic, 1> velocity;
+    Eigen::Matrix<T, Eigen::Dynamic, 1> acceleration;
+    Trajectory<T> trajectory;
+    bool runnable;
+    // rapidjson::GenericDocument<rapidjson::UTF8<> > doc;
+    json11::Json json;
 public:
 
     JointTrajectory() : Trajectory<T, DOF_C, DOF_C, DOF_C>() {}
@@ -81,7 +104,41 @@ public:
         velocity.setZero();
     }
     virtual void loadFromJSON(std::string filename) {
-        Trajectory<T, pos_dim, vel_dim, acc_dim>::loadFromJSON(filename);
-        this->setDof(json["dof"].int_value());
+        // std::cout << "LOADING JSON" << std::endl;
+        // std::ifstream ifs(filename);
+        // if (ifs.is_open()) {
+        //     std::cout << "OPEN!" << std::endl;
+        // } else {
+        //     std::cout << "CLOSED!" << std::endl;
+        // }
+        // std::cout << "IFS " << filename << std::endl;
+        // rapidjson::IStreamWrapper isw(ifs);
+        // std::cout << "ISW" << std::endl;
+        // // doc = rapidjson::Document();
+        // // rapidjson::Document doc2;
+        // doc = std::make_shared<rapidjson::Document>();
+        // std::cout << "DOC" << std::endl;
+        // doc->ParseStream(isw);
+        // std::cout << "PARSE!!" << std::endl;
+        // if (!doc->IsObject()) {
+        //     std::cerr << "Config File: " << filename << " does not exist for JointDynamicAttractor" << std::endl;
+        //     exit(-2);
+        // }
+        // std::cout << "STARTING" << std::endl;
+        std::ifstream t(filename);
+        // std::cout << "IFSTREAM" << std::endl;
+        std::string str((std::istreambuf_iterator<char>(t)),
+                        std::istreambuf_iterator<char>());
+        t.close();
+        // std::cout << "STRING" << std::endl;
+        // std::cout << str << std::endl;
+        std::string error;
+        json = json11::Json::parse(str, error);
+        // std::cout << "PARSE" << error << std::endl;
+        if (!error.empty()) {
+            std::cerr << "Config File: " << filename << " does not exist for JointDynamicAttractor" << std::endl;
+            exit(-2);
+        }
+        // std::cout << "PARSED!!" << std::endl;
     }
 };

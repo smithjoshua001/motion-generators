@@ -10,6 +10,7 @@
 #include <rst-rt/kinematics/JointAngles.hpp>
 #include <rst-rt/kinematics/JointVelocities.hpp>
 #include <rst-rt/kinematics/JointAccelerations.hpp>
+#include <CosimaUtilities/Timing.hpp>
 
 #include "motion-generators/JointDynamicAttractor.hpp"
 #include "motion-generators/JointTrajectoryOrocos.hpp"
