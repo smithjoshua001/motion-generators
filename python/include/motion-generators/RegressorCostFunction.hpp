@@ -46,12 +46,12 @@ public:
         // regressor.setZero();
         assert(input.pos.rows() == chain.getNumOfJoints());
         assert(fk_pos_out.rows() == 3);
-        LOG_DEBUG_LEVEL5(DL::util::console, "TESTING: {} {}", input.pos.rows(), input.pos.cols());
+        LOG_DEBUG_LEVEL5("TESTING: {} {}", input.pos.rows(), input.pos.cols());
         for (size_t i = 0; i < input.pos.cols(); i++) {
             q = input.pos.col(i).transpose();
             qd = input.vel.col(i).transpose();
             qdd = input.acc.col(i).transpose();
-            LOG_DEBUG_LEVEL5(DL::util::console, "TESTING: {}", q.transpose());
+            LOG_DEBUG_LEVEL5("TESTING: {}", q.transpose());
             chain->updateChainPos(q);
             chain->updateChainVel(qd);
 
@@ -62,7 +62,8 @@ public:
 
             fk->getAdjugates(qd, jacobians, adjs);
 
-            dyn->calcSlotineLiBaseRegressor(dyn->getRegressorProjector(), jacobians, jacobianDots, adjs, inverseAdjoints, qd, qdd, regressor.block(i * chain->getNumOfJoints(), 0, chain->getNumOfJoints(), dyn->getNumOfBaseParams()));
+            // dyn->calcSlotineLiBaseRegressor(dyn->getRegressorProjector(), jacobians, jacobianDots, adjs, inverseAdjoints, qd, qdd, regressor.block(i * chain->getNumOfJoints(), 0, chain->getNumOfJoints(), dyn->getNumOfBaseParams()));
+            dyn->calcSlotineLiBaseRegressorWithFriction(dyn->getRegressorProjector(), jacobians, jacobianDots, adjs, inverseAdjoints, qd, qdd, qd, regressor.block(i * chain->getNumOfJoints(), 0, chain->getNumOfJoints(), dyn->getNumOfBaseParams() + chain->getNumOfJoints() * 2));
             q_out.row(i) = input.pos.col(i).transpose();
             qd_out.row(i) = input.vel.col(i).transpose();
             qdd_out.row(i) = input.acc.col(i).transpose();

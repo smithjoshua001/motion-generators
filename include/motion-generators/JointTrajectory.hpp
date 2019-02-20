@@ -4,6 +4,16 @@
 #include <tuple>
 #include <iostream>
 
+// #define rapidjson my::rapid::json
+// #define rapidjson_BEGIN namespace my { namespace rapid { namespace json {
+// #define rapidjson_END } } }
+
+#include <fstream>
+#include <memory>
+#include <string>
+#include <streambuf>
+#include <json11.hpp>
+
 template <typename T> struct Trajectory {
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, vel, acc;
     Trajectory(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> pos, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> vel, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> acc) {
@@ -22,6 +32,8 @@ protected:
     Eigen::Matrix<T, Eigen::Dynamic, 1> acceleration;
     Trajectory<T> trajectory;
     bool runnable;
+    // rapidjson::GenericDocument<rapidjson::UTF8<> > doc;
+    json11::Json json;
 public:
 
     JointTrajectory() {
@@ -93,5 +105,42 @@ public:
         velocity.setZero();
         acceleration.setZero();
     }
-    virtual void loadFromJSON(std::string filename) {}
+    virtual void loadFromJSON(std::string filename) {
+        // std::cout << "LOADING JSON" << std::endl;
+        // std::ifstream ifs(filename);
+        // if (ifs.is_open()) {
+        //     std::cout << "OPEN!" << std::endl;
+        // } else {
+        //     std::cout << "CLOSED!" << std::endl;
+        // }
+        // std::cout << "IFS " << filename << std::endl;
+        // rapidjson::IStreamWrapper isw(ifs);
+        // std::cout << "ISW" << std::endl;
+        // // doc = rapidjson::Document();
+        // // rapidjson::Document doc2;
+        // doc = std::make_shared<rapidjson::Document>();
+        // std::cout << "DOC" << std::endl;
+        // doc->ParseStream(isw);
+        // std::cout << "PARSE!!" << std::endl;
+        // if (!doc->IsObject()) {
+        //     std::cerr << "Config File: " << filename << " does not exist for JointDynamicAttractor" << std::endl;
+        //     exit(-2);
+        // }
+        // std::cout << "STARTING" << std::endl;
+        std::ifstream t(filename);
+        // std::cout << "IFSTREAM" << std::endl;
+        std::string str((std::istreambuf_iterator<char>(t)),
+                        std::istreambuf_iterator<char>());
+        t.close();
+        // std::cout << "STRING" << std::endl;
+        // std::cout << str << std::endl;
+        std::string error;
+        json = json11::Json::parse(str, error);
+        // std::cout << "PARSE" << error << std::endl;
+        if (!error.empty()) {
+            std::cerr << "Config File: " << filename << " does not exist for JointDynamicAttractor" << std::endl;
+            exit(-2);
+        }
+        // std::cout << "PARSED!!" << std::endl;
+    }
 };

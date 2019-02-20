@@ -9,35 +9,41 @@ from math import ceil
 
 
 class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
+
     def __init__(self, TrajModel, Chain, config):
         super(ModifiedFourierTrajectoryOptimzerOptim, self).__init__(config)
+        print('Debug 1')
         self.TrajModel = TrajModel
         self.Chain = Chain
-        self.limits = DynamicsLib.LimitsVector(7)
+        self.dof = Chain.getNumOfJoints()
+        print('Debug 2')
+        self.limits = DynamicsLib.LimitsVector(self.dof)
         self.Chain.getJointLimits(self.limits)
+        print('Debug 3')
         self.CF = RegressorCostFunction.RegressorCostFunction_d(self.Chain)
 
-        self.dof = Chain.getNumOfJoints()
+        print('Debug 4')
         self.nf = [TrajModel.getFourierCoefficientNumber()] * self.dof
 
         self.velocity_limit = self.config['velLimit']
         self.acc_limit = self.config['accLimit']
         self.torque_limit = self.config['torqueLimit']
-
+        print('Debug 5')
         self.wf_min = self.config['trajectoryPulseMin']
         self.wf_max = self.config['trajectoryPulseMax']
         self.wf_init = self.config['trajectoryPulseInit']
 
         self.max_pos = self.config['max_pos']
         self.min_pos = self.config['min_pos']
-
+        print('Debug 6')
         self.amin = self.bmin = self.config['trajectoryCoeffMin']
         self.amax = self.bmax = self.config['trajectoryCoeffMax']
 
         self.last_best_f_f1 = 0
         self.num_constraints = 0
+        print('Debug 7')
         if(self.config['joint_limit_constraint']):
-            self.num_constraints += self.dof*2
+            self.num_constraints += self.dof * 2
         if(self.config['velocity_limit_constraint']):
             self.num_constraints += self.dof
         if(self.config['acc_limit_constraint']):
@@ -46,19 +52,21 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
             self.num_constraints += self.dof
         if(self.config['pose_limit_constraints']):
             self.pose_constraint_index = self.num_constraints
-            self.num_constraints += 3*2
+            self.num_constraints += 3 * 2
         if(self.config['collision_constraints']):
             self.collision_constraints_index = self.num_constraints
             self.num_constraints += 1  # FK.number_of_collision_checks()
+        print('Debug 8')
 
     def vecToParams(self, x):
-        # convert vector of all solution variables to separate parameter variables
+        # convert vector of all solution variables to separate parameter
+        # variables
         wf = x[0]
-        ab_len = self.dof*self.nf[0]
+        ab_len = self.dof * self.nf[0]
         a = np.array(
-            np.split(np.array(x[1:1+ab_len]), self.dof))
+            np.split(np.array(x[1:1 + ab_len]), self.dof))
         b = np.array(np.split(
-            np.array(x[1+ab_len:1+ab_len*2]), self.dof))
+            np.array(x[1 + ab_len:1 + ab_len * 2]), self.dof))
         return wf, a, b
 
     def testBounds(self, x):
@@ -85,7 +93,7 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
         # print x
         if not self.testBounds(x):
             f = 10000.0
-            g = [10.0]*self.num_constraints
+            g = [10.0] * self.num_constraints
             fail = 1.0
             return f, g, fail
 
@@ -106,14 +114,25 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
                      * self.config['controlRate'])), 3))
         collision = False
         self.regressor = np.zeros(
-            (self.dof * int(ceil(self.TrajModel.getPeriodLength() * self.config['controlRate'])), self.CF.getNumOfBaseParams()), dtype='float64')
+            (self.dof * int(ceil(self.TrajModel.getPeriodLength() * self.config['controlRate'])), self.CF.getNumOfBaseParams() + 2 * self.dof), dtype='float64')
         self.CF.compute(trajectory_data, q_discrete, qd_discrete,
                         qdd_discrete, FK_discrete, self.regressor, collision)
+        # print (np.matrix(self.regressor).T * np.matrix(self.regressor)).shape
+        # print np.linalg.eig((np.matrix(self.regressor).T *
+        # np.matrix(self.regressor)))
+
         # input, &q_out, &qd_out, &qdd_out, &fk_pos_out, &regressor, &collision
 
-        f = np.linalg.cond(self.regressor)
+        # f = np.linalg.norm(self.regressor) * np.linalg.norm(
+        #     np.linalg.pinv(self.regressor))
+        f = np.linalg.cond(self.regressor, p=-2)
+        # f = np.linalg.cond(
+        #     (np.matrix(self.regressor).T * np.matrix(self.regressor)))
+        # u, s, vh = np.linalg.svd(self.regressor)
+        # print s
+        # f = s[0] / s[s.shape[0] - 1]
         f1 = 0
-        g = [1e10]*self.num_constraints
+        g = [1e10] * self.num_constraints
         for n in range(self.dof):
             j = 0
             if self.config['joint_limit_constraint']:
@@ -121,17 +140,17 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
                     np.min(q_discrete[:, n])
                 g[self.dof +
                   n] = np.max(q_discrete[:, n]) - self.limits[n][1]
-                j = j+2
+                j = j + 2
 
             if self.config['velocity_limit_constraint']:
-                g[j*self.dof+n] = np.max(
+                g[j * self.dof + n] = np.max(
                     np.abs(qd_discrete[:, n])) - self.velocity_limit
-                j = j+1
+                j = j + 1
 
         if self.config['acc_limit_constraint']:
-            g[j*self.dof:j*self.dof+self.dof] = (np.max(
+            g[j * self.dof:j * self.dof + self.dof] = (np.max(
                 np.abs(qdd_discrete[:, n])) - np.array(self.acc_limit))
-            j = j+self.dof
+            j = j + self.dof
 
         if self.config['pose_limit_constraints']:
             g[self.pose_constraint_index] = np.max(
@@ -140,7 +159,7 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
               1] = np.max(FK_discrete[:, 1]) - self.max_pos[1]
             g[self.pose_constraint_index +
               2] = np.max(FK_discrete[:, 2]) - self.max_pos[2]
-            g[self.pose_constraint_index+3] = self.min_pos[0] -\
+            g[self.pose_constraint_index + 3] = self.min_pos[0] -\
                 np.min(FK_discrete[:, 0])
             g[self.pose_constraint_index +
               4] = self.min_pos[1] - np.min(FK_discrete[:, 1])
@@ -158,9 +177,9 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
             self.last_best_f_f1 = f1
             self.last_best_sol = x
             self.last_best_sol2 = x2
-        if ((self.iter_cnt-1) % 100 == 0):
+        if ((self.iter_cnt - 1) % 100 == 0):
             print("objective function value: {} (last best: {} + {})".format(f,
-                                                                             self.last_best_f-self.last_best_f_f1, self.last_best_f_f1))
+                                                                             self.last_best_f - self.last_best_f_f1, self.last_best_f_f1))
         # c = True
 
         fail = 0.0
@@ -185,11 +204,11 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
                         i, j), 'c', value=self.config['trajectoryCoeffInit'][i], lower=self.amin, upper=self.amax)
                 else:
                     opt_prob.addVar('a{}_{}'.format(
-                        i, j), 'c', value=(random.uniform(self.amin, self.amax))*0, lower=self.amin, upper=self.amax)
+                        i, j), 'c', value=(random.uniform(self.amin, self.amax)) * 0, lower=self.amin, upper=self.amax)
         for j in range(self.nf[0]):
             for i in range(self.dof):
                 opt_prob.addVar('b{}_{}'.format(
-                    j, i), 'c', value=(random.uniform(self.bmin, self.bmax))*0, lower=self.bmin, upper=self.bmax)
+                    j, i), 'c', value=(random.uniform(self.bmin, self.bmax)) * 0, lower=self.bmin, upper=self.bmax)
 
         # add constraint vars (constraint functions are in obfunc)
         opt_prob.addConGroup('g', self.num_constraints,
@@ -204,7 +223,7 @@ class ModifiedFourierTrajectoryOptimzerOptim(OptimizerBase.OptimizerBase):
 
         self.addVarsAndConstraints(opt_prob)
         sol_vec = self.runOptimizer(opt_prob)
-        print sol_vec
+        # print sol_vec
         # sol_wf, sol_a, sol_b = self.vecToParams(sol_vec)
         self.TrajModel.setFromParameters(np.array(sol_vec))
 
