@@ -28,15 +28,19 @@ ${PROJECT_SOURCE_DIR}/include
 include
 ${USE_OROCOS_INCLUDE_DIRS}
 ${OROCOS-RTT_INCLUDE_DIRS}
+${DEPENDENCY_INCLUDE_DIRS}
+${RapidJSON_INCLUDE_DIRS}
 ${RST-RT_INCLUDE_DIRS})
 
 list(APPEND DEPENDENCY_LIBRARIES ${OROCOS-RTT_LIBRARIES} ${OROCOS-RTT_RTT-SCRIPTING_LIBRARY} ${OROCOS-RTT_TYPEKIT_LIBRARIES} ${USE_OROCOS_LIBRARIES} ${RST-RT_LIBRARIES})
-
+message(STATUS "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+message(STATUS "${RapidJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR}")
 orocos_component(RTT_${CMAKE_PROJECT_NAME}
 ${PROJECT_SOURCE_DIR}/orocos/src/JointDynamicAttractorOrocos.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/TaskDynamicAttractor.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/ModifiedFourierTrajectoryOrocos.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/SineWaveJointOrocos.cpp
+${PROJECT_SOURCE_DIR}/orocos/src/CJDAOrocos.cpp
 )
 
 set_target_properties(RTT_${CMAKE_PROJECT_NAME} PROPERTIES COMPILE_DEFINITIONS RTT_COMPONENT)

@@ -13,6 +13,8 @@ public:
         freq.setZero();
         scale.resize(this->dof);
         scale.setZero();
+        offset.resize(this->dof);
+        offset.setZero();
         // freq = (Eigen::Matrix<T, Eigen::Dynamic, 1>::Random(this->DOF));
         // freq += T(1.0);
         // scale = (Eigen::Matrix<T, Eigen::Dynamic, 1>::Random(this->DOF));
@@ -45,6 +47,8 @@ public:
         freq.setOnes();
         scale.resize(this->dof);
         scale.setOnes();
+        offset.resize(this->dof);
+        offset.setZero();
         // std::cout << "FREQUENCY: " << freq.transpose() << std::endl << "Size: " << freq.size() << std::endl;
         this->simulation_period = 2 * M_PI / freq.eval().maxCoeff();
         this->runnable = true;
@@ -52,7 +56,7 @@ public:
 
     void update(double time = 0) override {
         assert(this->runnable);
-        this->position = scale * (freq * time).sin();
+        this->position = scale * (freq * time).sin() + offset;
         this->velocity = scale * freq * (freq * time).cos();
         this->acceleration = -scale * freq * freq * (freq * time).sin();
     }
@@ -78,9 +82,11 @@ public:
         setDof(this->dof);
         freq.resize(this->dof);
         scale.resize(this->dof);
+	offset.resize(this->dof);
         for (size_t i = 0; i < this->dof; i++) {
             freq(i) = T(this->json["frequency"][i].number_value());
             scale(i) = T(this->json["scale"][i].number_value());
+            offset(i) = T(this->json["offset"][i].number_value());
         }
         this->simulation_period = 2 * M_PI / freq.maxCoeff();
 
@@ -90,6 +96,7 @@ public:
 private:
     Eigen::Array<T, Eigen::Dynamic, 1> freq;
     Eigen::Array<T, Eigen::Dynamic, 1> scale;
+    Eigen::Array<T, Eigen::Dynamic, 1> offset;
 
     T simulation_period;
 };

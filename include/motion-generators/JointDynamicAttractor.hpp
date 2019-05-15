@@ -21,6 +21,8 @@ public:
         state_dot.setZero();
         des_state.resize(dof * 2);
         des_state.setZero();
+        accelerationOffset.resize(dof);
+        accelerationOffset.setZero();
         prev_time = 0;
         sim_period = -1;
         finished = true;
@@ -28,6 +30,9 @@ public:
 
     void setInitialState(Eigen::Matrix<T, Eigen::Dynamic, 1> initialState) {
         state = initialState;
+    }
+    void setAccelerationOffset(const Eigen::Matrix<T,Eigen::Dynamic,1>& accoff){
+        this->accelerationOffset = accoff;
     }
     Eigen::Matrix<T, Eigen::Dynamic, 1> &getInitialState() {
         return state;
@@ -67,6 +72,8 @@ public:
         state_dot.setZero();
         des_state.resize(dof * 2);
         des_state.setZero();
+        accelerationOffset.resize(dof);
+        accelerationOffset.setZero();
     }
 
     void update(double time = 0) override {
@@ -74,7 +81,11 @@ public:
         diff_time = time - prev_time;
         prev_time = time;
         state_dot = gainMatrix * (state - des_state);
+        state_dot.head(this->dof) += des_state.tail(this->dof);
+        state_dot.tail(this->dof) += accelerationOffset;
+        
         state = state + state_dot * diff_time;
+        
         this->position = state.head(this->dof);
         this->velocity = state.tail(this->dof);
         this->acceleration = state_dot.tail(this->dof);
@@ -112,6 +123,7 @@ private:
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> gainMatrix;
     Eigen::Matrix<T, Eigen::Dynamic, 1> state, state_dot;
     Eigen::Matrix<T, Eigen::Dynamic, 1> des_state;
+    Eigen::Matrix<T, Eigen::Dynamic, 1> accelerationOffset;
     double prev_time, diff_time;
     T sim_period;
     T limit;

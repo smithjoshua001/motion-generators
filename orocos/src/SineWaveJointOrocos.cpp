@@ -12,6 +12,7 @@ public:
         //trajectory_sine(std::make_shared < SineWaveJoint<float> >()),
         JointTrajectoryOrocos(this, std::make_shared < SineWaveJoint<float> >()) {
         finish = false;
+        addProperty("finish",finish);
         eta = 0.001;
     }
     bool startHook() {
@@ -22,9 +23,9 @@ public:
         return JointTrajectoryOrocos::configureHook();
     }
     void updateHook() {
-        if (!finish) {
+        
             JointTrajectoryOrocos::updateHook();
-        } else if (std::fmod(CosimaUtilities::getCurrentTime() - start_time, this->getTrajectory()->getPeriodLength()) < eta) {
+        if (finish && std::fmod(CosimaUtilities::getCurrentTime() - start_time, this->getTrajectory()->getPeriodLength()) < eta) {
             stopHook();
         }
     }
