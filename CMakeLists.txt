@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 2.8.3)
 # This creates a standard cmake project. You may extend this file with
 # any cmake macro you see fit.
 #
-project(MotionGenerators)
+project(motion_generators)
 INCLUDE(GNUInstallDirs)
 
 set(CMAKE_BUILD_TYPE Release)
@@ -69,6 +69,5 @@ if (NOT SWIG_FOUND)
 else()
   #add_subdirectory(python)
 endif()
-
-
+include (ros/CMakeLists.txt)
 include(vscode OPTIONAL)

@@ -24,7 +24,15 @@ template <typename T> struct Trajectory {
     Trajectory() {}
 };
 
-template <typename T> class JointTrajectory {
+#include <fstream>
+#include <memory>
+#include <string>
+#include <streambuf>
+#include <json11.hpp>
+
+#include "motion-generators/Trajectory.hpp"
+
+template <typename T, int DOF_C = -1> class JointTrajectory : Trajectory<T, DOF_C, DOF_C, DOF_C> {
 protected:
     size_t dof;
     Eigen::Matrix<T, Eigen::Dynamic, 1> position;
@@ -36,11 +44,9 @@ protected:
     json11::Json json;
 public:
 
-    JointTrajectory() {
-        runnable = false;
-    }
+    JointTrajectory() : Trajectory<T, DOF_C, DOF_C, DOF_C>() {}
 
-    JointTrajectory(size_t dof) {
+    JointTrajectory(size_t dof) : Trajectory<T, DOF_C, DOF_C, DOF_C>() {
         this->dof = dof;
         position.resize(this->dof);
         position.setZero();
@@ -48,9 +54,8 @@ public:
         velocity.setZero();
         acceleration.resize(this->dof);
         acceleration.setZero();
-        runnable = true;
     }
-    JointTrajectory(size_t dof, Eigen::Matrix<T, Eigen::Dynamic, 1> position) {
+    JointTrajectory(size_t dof, Eigen::Matrix<T, DOF_C, 1> position) {
         this->dof = dof;
         if (position.size() != dof) {
             throw std::runtime_error("Position dof size does not match the input dof size");
@@ -64,13 +69,8 @@ public:
         runnable = true;
     }
     virtual ~JointTrajectory() {};
-    virtual void update(double time = 0) = 0;
-    Eigen::Matrix<T, Eigen::Dynamic, 1> const &getPosition() {return position;}
-    Eigen::Matrix<T, Eigen::Dynamic, 1> const &getVelocity() {return velocity;}
-    Eigen::Matrix<T, Eigen::Dynamic, 1> const &getAcceleration() {return acceleration;}
-    virtual T getPeriodLength() = 0;
 
-    Trajectory<T> simulate(T control_frequency) {
+    TrajectoryStorage<T> simulate(T control_frequency) {
         assert(runnable);
         //TODO better solution
         assert(this->getPeriodLength() > 0 && "Invalid Trajectory to simulate");
@@ -90,10 +90,6 @@ public:
     }
     size_t getDof() {
         return dof;
-    }
-
-    bool &getRunnable() {
-        return runnable;
     }
 
     virtual void setDof(size_t dof) {
