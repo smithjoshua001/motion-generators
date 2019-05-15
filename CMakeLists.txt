@@ -25,13 +25,15 @@ find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 
-find_package(RapidJSON REQUIRED)
-include_directories(BEFORE SYSTEM ${RapidJSON_INCLUDE_DIRS})
-link_directories(${RapidJSON_LIBRARY_DIR} ${RapidJSON_LIBRARY_DIRS})
-
 find_package(PkgConfig REQUIRED)
+pkg_search_module(RapidJSON REQUIRED RapidJSON rapidjson)
+include_directories(${RapidJSON_INCLUDE_DIRS})
+link_directories(${RapidJSON_LIBRARY_DIR} ${RapidJSON_LIBRARY_DIRS})
+message(STATUS "=============================RAPIDJSON: ${RapidJSON_INCLUDE_DIRS}======================")
+
 pkg_search_module(json11 REQUIRED json11)
 include_directories(${json11_INCLUDE_DIRS})
+link_directories(${json11_LIBRARY_DIR} ${json11_LIBRARY_DIRS})
 
 list(APPEND DEPENDENCY_LIBRARIES ${json11_LIBRARIES} ${RapidJSON_LIBRARIES} ${EIGEN3_LIBRARIES})
 list(APPEND DEPENDENCY_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include" ${RapidJSON_INCLUDE_DIRS} ${json11_INCLUDE_DIR} ${RapidJSON_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR})
@@ -61,9 +63,9 @@ else()
   add_subdirectory(orocos)
 endif()
 
-find_package(SWIG REQUIRED)
+find_package(SWIG)
 if (NOT SWIG_FOUND)
-message (ERROR "\nCould not find SWIG.")
+#message (ERROR "\nCould not find SWIG.")
 else()
   #add_subdirectory(python)
 endif()

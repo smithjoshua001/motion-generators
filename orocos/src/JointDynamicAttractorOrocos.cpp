@@ -33,7 +33,10 @@ void JointDynamicAttractorOrocos::updateHook() {
     // std::cout<<"Read in_robotstatus!"<<std::endl;
     if (this->in_robotstatus_flow != RTT::NoData && !first_config) {
         state_temp.head(this->dof) = this->in_robotstatus_var.angles;
-        state_temp.tail(this->dof) = this->in_robotstatus_var.velocities;
+        //state_temp.tail(this->dof) = this->in_robotstatus_var.velocities;
+        std::cout<<"Velocities:"<<this->in_robotstatus_var.velocities.transpose()<<std::endl;
+         std::cout<<"SET INITIAL STATE!"<<std::endl;
+         std::cout<<state_temp.transpose()<<std::endl;
         // std::cout<<"SET INITIAL STATE!"<<std::endl;
         jda->setInitialState(state_temp);
         first_config = true;
