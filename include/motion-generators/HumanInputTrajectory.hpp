@@ -13,6 +13,7 @@ namespace motion_generators {
             HumanInputTrajectory() : CartesianTrajectory<T>() {
                 currentPose.setZero();
                 desiredPose.setZero();
+                desiredPose[3]=1;
                 errorPosition.setZero();
                 maxDistance = 0.1;
             }
