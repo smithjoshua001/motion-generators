@@ -24,10 +24,11 @@ void TaskDynamicAttractorRos::prepareRos(ros::NodeHandle &nh) {
 
 void TaskDynamicAttractorRos::update(double dt) {
     // std::cout << "UPDATE!!" << std::endl;
-    if (first_config && go && started_contact && time_elapsed < 0.5) {
+    if (first_config && go && started_contact && time_elapsed > 0.5) {
         model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setShouldBeGrounded(true);
         model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(1.0);
         time_elapsed += dt;
+        std::cout<<first_config<<", "<<go<<", "<<started_contact<<", "<<time_elapsed<<std::endl;
         return;
     }
     TaskDynamicAttractor::update(dt);
@@ -104,7 +105,7 @@ void TaskDynamicAttractorRos::setDesiredPose(const geometry_msgs::PoseStamped::C
         TaskDynamicAttractor::setGains(gain.getValue(), orientation_gain.getValue());
         time_elapsed = 0;
         std::cout << "PASS DES AND STATE!!" << std::endl;
-
+        if(!first_config)
         TaskDynamicAttractor::setInitialState(state);
         TaskDynamicAttractor::setDesiredPose(des_state);
     }catch (tf2::TransformException &ex) {

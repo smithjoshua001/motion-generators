@@ -12,10 +12,11 @@ HumanInputTrajectoryRos::HumanInputTrajectoryRos(std::string const &name, ros::N
         exit(-1);
     }
     prepareRos(nh);
-    maxVel.setValue(0.001);
+    maxVel.setValue(0.01);
     maxDistance.setValue(0.1);
     transitionTime.setValue(5);
     enable = false;
+    this->addParametersToHandler("");
 }
 
 void HumanInputTrajectoryRos::prepareRos(ros::NodeHandle &nh) {
@@ -25,12 +26,15 @@ void HumanInputTrajectoryRos::prepareRos(ros::NodeHandle &nh) {
 
 void HumanInputTrajectoryRos::update(double dt) {
     currentPose.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
+        currentPose.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+
     HumanInputTrajectory<double>::maxDistance = maxDistance.getValue();
     if (enable && timeAccum <= transitionTime.getValue()) {
         timeAccum += dt;
         model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setShouldBeGrounded(true);
         model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(timeAccum / (timeAccum + (((transitionTime.getValue() * 0.80) - ((transitionTime.getValue() * 0.80) * 0.99)) / 0.99)));
         desiredPose.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
+        desiredPose.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
     }
     if (enable && timeAccum > transitionTime.getValue()) {
         std::lock_guard<std::mutex> guard(desLock);
@@ -40,44 +44,66 @@ void HumanInputTrajectoryRos::update(double dt) {
         model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setSwingPhase(0.0);
 
         model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->setPositionWorldToEndEffectorInWorldFrame(kindr::Position3D(desiredPose.head<3>()));
-
+        loco::RotationQuaternion rotation;
+        rotation.w() = this->desiredPose[3];
+        rotation.x() = this->desiredPose[4];
+        rotation.y() = this->desiredPose[5];
+        rotation.z() = this->desiredPose[6];
+        model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->setOrientationWorldToEndEffector(rotation);
         geometry_msgs::PoseStamped desiredPose;
-        desiredPose.header.frame_id = "map";
+        desiredPose.header.frame_id = "odom";
         desiredPose.header.stamp = ros::Time::now();
         desiredPose.pose.position.x = this->desiredPose[0];
         desiredPose.pose.position.y = this->desiredPose[1];
         desiredPose.pose.position.z = this->desiredPose[2];
-        desiredPose.pose.orientation.w = 1;
-        desiredPose.pose.orientation.x = 0;
-        desiredPose.pose.orientation.y = 0;
-        desiredPose.pose.orientation.z = 0;
+        desiredPose.pose.orientation.w = this->desiredPose[3];
+        desiredPose.pose.orientation.x = this->desiredPose[4];
+        desiredPose.pose.orientation.y = this->desiredPose[5];
+        desiredPose.pose.orientation.z = this->desiredPose[6];
         outputPose_pub.publish(desiredPose);
+        
     }
+    
 }
 void HumanInputTrajectoryRos::reset() {
     HumanInputTrajectory<double>::reset();
     std::lock_guard<std::mutex> guard(desLock);
     currentPose.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
-    model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setSwingPhase(0.0);
+    currentPose.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+    // model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setSwingPhase(0.0);
 }
 using QD = quadruped_model::QuadrupedModel::QuadrupedDescription;
 void HumanInputTrajectoryRos::updateJoystick(const sensor_msgs::Joy::ConstPtr &joy_msg) {
-    if (joy_msg->buttons[0]) {
+    
+    if (joy_msg->buttons.size()>0 && joy_msg->buttons[0]) {
         reset();
         if (model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->isGrounded()) {
             timeAccum = 0;
         }
         enable = true;
     }
-    if (joy_msg->buttons[1]) {
+    if (joy_msg->buttons.size()>0 && joy_msg->buttons[1]) {
         enable = false;
     }
-
+    
     if (enable) {
         std::lock_guard<std::mutex> guard(desLock);
         desiredPose[0] += joy_msg->axes[0] * maxVel.getValue();
         desiredPose[1] += joy_msg->axes[1] * maxVel.getValue();
         desiredPose[2] += joy_msg->axes[2] * maxVel.getValue();
+        if(joy_msg->axes.size()>3){
+            Eigen::Quaterniond quat_dot(0,joy_msg->axes[3] * maxVel.getValue(),joy_msg->axes[4] * maxVel.getValue(), joy_msg->axes[5] * maxVel.getValue());
+            // std::cout<<"QUAT DOT:: "<<quat_dot.coeffs().transpose()<<std::endl;
+            Eigen::Quaterniond quat(desiredPose[3],desiredPose[4],desiredPose[5],desiredPose[6]);
+            quat_dot = (quat*quat_dot);
+            quat_dot.coeffs()*=0.5;
+            // std::cout<<quat_dot.coeffs().transpose()<<", "<<quat_dot.w()<<std::endl;
+            desiredPose[3] += quat_dot.w();
+            desiredPose[4] += quat_dot.x();
+            desiredPose[5] += quat_dot.y();
+            desiredPose[6] += quat_dot.z();
+        }
+        // std::cout<<desiredPose.transpose()<<std::endl;
     }
 }
 

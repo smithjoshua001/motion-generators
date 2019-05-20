@@ -24,4 +24,5 @@
 <depend>tf2_geometry_msgs</depend>
 <depend>tf2</depend>
 <depend>sensor_msgs</depend>
+<depend>JSON11</depend>
 </package>

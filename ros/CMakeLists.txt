@@ -19,7 +19,6 @@ find_package(catkin REQUIRED
     tf2_geometry_msgs
     sensor_msgs
     )
-
         # Attempt to find catkinized kindr
 find_package(kindr QUIET)
 if(NOT kindr_FOUND)
@@ -27,7 +26,9 @@ if(NOT kindr_FOUND)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(kindr kindr REQUIRED)
 endif()
-
+pkg_check_modules(JSON11 REQUIRED json11)
+find_library(json11_LIBRARY NAMES ${JSON11_LIBRARIES} HINTS ${JSON11_LIBRARY_DIRS})
+set(JSON11_LIBRARIES "${json11_LIBRARY}") 
     catkin_package(INCLUDE_DIRS
     include
     ros/include
@@ -49,7 +50,9 @@ endif()
     quadruped_model
     quadruped_description
     tf2_geometry_msgs
-    sensor_msgs)
+    sensor_msgs
+    DEPENDS 
+    JSON11)
 
 
 
@@ -58,6 +61,7 @@ include
 ros/include
 ${kindr_INCLUDE_DIRS}
 ${catkin_INCLUDE_DIRS}
+${json11_INCLUDE_DIRS}
 )
 
 list(APPEND DEPENDENCY_LIBRARIES ${catkin_LIBRARIES})
@@ -72,7 +76,7 @@ add_dependencies(
   ${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(${CMAKE_PROJECT_NAME} ${DEPENDENCY_LIBRARIES})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${json11_LIBRARIES} ${DEPENDENCY_LIBRARIES})
 
 install(DIRECTORY ros/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
