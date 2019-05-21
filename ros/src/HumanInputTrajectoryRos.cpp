@@ -50,16 +50,17 @@ void HumanInputTrajectoryRos::update(double dt) {
         rotation.y() = this->desiredPose[5];
         rotation.z() = this->desiredPose[6];
         model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->setOrientationWorldToEndEffector(rotation);
+        loco::RotationQuaternion rotInvert = rotation.inverted();
         geometry_msgs::PoseStamped desiredPose;
         desiredPose.header.frame_id = "odom";
         desiredPose.header.stamp = ros::Time::now();
         desiredPose.pose.position.x = this->desiredPose[0];
         desiredPose.pose.position.y = this->desiredPose[1];
         desiredPose.pose.position.z = this->desiredPose[2];
-        desiredPose.pose.orientation.w = this->desiredPose[3];
-        desiredPose.pose.orientation.x = this->desiredPose[4];
-        desiredPose.pose.orientation.y = this->desiredPose[5];
-        desiredPose.pose.orientation.z = this->desiredPose[6];
+        desiredPose.pose.orientation.w = rotation.w();
+        desiredPose.pose.orientation.x = -rotation.x();
+        desiredPose.pose.orientation.y = -rotation.y();
+        desiredPose.pose.orientation.z = -rotation.z();
         outputPose_pub.publish(desiredPose);
         
     }
@@ -92,7 +93,8 @@ void HumanInputTrajectoryRos::updateJoystick(const sensor_msgs::Joy::ConstPtr &j
         desiredPose[1] += joy_msg->axes[1] * maxVel.getValue();
         desiredPose[2] += joy_msg->axes[2] * maxVel.getValue();
         if(joy_msg->axes.size()>3){
-            Eigen::Quaterniond quat_dot(0,joy_msg->axes[3] * maxVel.getValue(),joy_msg->axes[4] * maxVel.getValue(), joy_msg->axes[5] * maxVel.getValue());
+            
+            Eigen::Quaterniond quat_dot(0,joy_msg->axes[3]*0 * maxVel.getValue(),joy_msg->axes[4] * maxVel.getValue(),joy_msg->axes[5]  * maxVel.getValue());
             // std::cout<<"QUAT DOT:: "<<quat_dot.coeffs().transpose()<<std::endl;
             Eigen::Quaterniond quat(desiredPose[3],desiredPose[4],desiredPose[5],desiredPose[6]);
             quat_dot = (quat*quat_dot);
