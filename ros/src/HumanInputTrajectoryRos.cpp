@@ -94,7 +94,7 @@ void HumanInputTrajectoryRos::updateJoystick(const sensor_msgs::Joy::ConstPtr &j
         enable = false;
     }
     
-    if (enable &&  !use_sigma_haptic_) {
+    if (enable &&  !use_sigma_haptic_ && joy_msg->axes.size()>=6) {
         std::lock_guard<std::mutex> guard(desLock);
         desiredPose[0] += joy_msg->axes[0] * maxVel.getValue();
         desiredPose[1] += joy_msg->axes[1] * maxVel.getValue();
