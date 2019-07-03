@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>motion_generators</name>
+  <name>MotionGenerators</name>
   <version>0.2.0</version>
   <description>The MotionGenerators package</description>
   <maintainer email="smithjoshua001@aol.co.uk">Joshua Smith</maintainer>
