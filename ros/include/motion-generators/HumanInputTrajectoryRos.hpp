@@ -34,6 +34,8 @@ namespace motion_generators {
 
             void updateJoystick(const sensor_msgs::Joy::ConstPtr &joy_msg);
 
+            void sigmaCallback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg);
+
         private:
             parameter_handler::Parameter<double> maxVel, maxDistance, transitionTime;
 
@@ -55,6 +57,15 @@ namespace motion_generators {
             double timeAccum;
             bool enable;
             std::mutex desLock;
+
+            // TODO remove this hardcoded boolean param (config file, priorities topic checks, ...)
+            // TODO decide how to have a button stop (emergency style..)
+            bool use_sigma_haptic_ = true;
+            ros::Subscriber sigma_sub_;
+            double sigma_time_;
+            double sigma_timeout_ = 0.25;
+            Eigen::Matrix<double, 7, 1> current_pose_sigma_, desired_pose_sigma_;
+
         };
     }
 }
