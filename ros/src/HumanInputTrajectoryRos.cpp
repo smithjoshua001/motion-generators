@@ -125,9 +125,10 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 	        current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
 	        current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
 
-	        ROS_ERROR_STREAM("(re-)set initial desired pose (difference = " << pose_msg->header.stamp.sec - sigma_time_ << " time out is " << sigma_timeout_);
-	        ROS_ERROR_STREAM("init desired pose with initial pose of " << desiredPose.head(3));
-	        ROS_ERROR_STREAM("and orientation of " << desiredPose.tail(4));
+	        bool pub_reset = true;
+	        ROS_ERROR_STREAM_COND(pub_reset, "(re-)set initial desired pose (difference = " << pose_msg->header.stamp.sec - sigma_time_ << " time out is " << sigma_timeout_);
+	        ROS_ERROR_STREAM_COND(pub_reset, "init desired pose with initial pose of " << desiredPose.head(3));
+	        ROS_ERROR_STREAM_COND(pub_reset, "and orientation of " << desiredPose.tail(4));
 	    }
 
 //		const kindr::RotationQuaternionPD & worldToBase = model->getTorsoPtr()->getMeasuredStatePtr()->getOrientationWorldToBase();

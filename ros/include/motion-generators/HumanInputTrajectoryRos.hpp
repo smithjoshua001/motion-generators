@@ -63,7 +63,7 @@ namespace motion_generators {
             bool use_sigma_haptic_ = true;
             ros::Subscriber sigma_sub_;
             double sigma_time_;
-            double sigma_timeout_ = 0.25;
+            double sigma_timeout_ = 1.5;
             Eigen::Matrix<double, 7, 1> current_pose_sigma_, desired_pose_sigma_;
 
         };
