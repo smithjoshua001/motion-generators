@@ -29,7 +29,8 @@ void HumanInputTrajectoryRos::prepareRos(ros::NodeHandle &nh) {
     outputPose_pub = nh.advertise<geometry_msgs::PoseStamped>("/HIT/" + name + "/output_pose", 1);
 
     //
-    sigma_sub_ = nh.subscribe("/pose_sigma_x", 1, &HumanInputTrajectoryRos::sigmaCallback, this);
+    if(use_sigma_haptic_)// if desired pose not initialized or if timeout occured
+    	sigma_sub_ = nh.subscribe("/pose_sigma_x", 1, &HumanInputTrajectoryRos::sigmaCallback, this);
 }
 
 void HumanInputTrajectoryRos::update(double dt) {
@@ -69,7 +70,9 @@ void HumanInputTrajectoryRos::update(double dt) {
         desiredPose.pose.orientation.x = -rotation.x();
         desiredPose.pose.orientation.y = -rotation.y();
         desiredPose.pose.orientation.z = -rotation.z();
-        outputPose_pub.publish(desiredPose);
+
+        if(!use_sigma_haptic_)
+        	outputPose_pub.publish(desiredPose);
     }
     
 }
@@ -117,59 +120,68 @@ void HumanInputTrajectoryRos::updateJoystick(const sensor_msgs::Joy::ConstPtr &j
 }
 
 void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::ConstPtr & pose_msg){
+	// TODO remove debug outut options
+    bool pub_reset = false, output_position = false, output_orientation = false;
 
-	if(use_sigma_haptic_){// if desired pose not initialized or if timeout occured
-		if((current_pose_sigma_.head(3).sum() == 0 && current_pose_sigma_.tail(3).sum() == 0 && current_pose_sigma_[3] == 1) || pose_msg->header.stamp.sec - sigma_time_ >= sigma_timeout_){
-	        model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setShouldBeGrounded(true);
-	        model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(timeAccum / (timeAccum + (((transitionTime.getValue() * 0.80) - ((transitionTime.getValue() * 0.80) * 0.99)) / 0.99)));
-	        current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
-	        current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+	std::lock_guard<std::mutex> guard(desLock);
+	double msg_time = (double)pose_msg->header.stamp.sec + 1e-9*(double)pose_msg->header.stamp.nsec;
 
-	        bool pub_reset = true;
-	        ROS_ERROR_STREAM_COND(pub_reset, "(re-)set initial desired pose (difference = " << pose_msg->header.stamp.sec - sigma_time_ << " time out is " << sigma_timeout_);
-	        ROS_ERROR_STREAM_COND(pub_reset, "init desired pose with initial pose of " << desiredPose.head(3));
-	        ROS_ERROR_STREAM_COND(pub_reset, "and orientation of " << desiredPose.tail(4));
-	    }
+	if((current_pose_sigma_.head(3).sum() == 0 && current_pose_sigma_.tail(3).sum() == 0 && current_pose_sigma_[3] == 1) ||//not init
+			msg_time - sigma_time_ >= sigma_timeout_){// timeout
+		model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setShouldBeGrounded(true);
+	    model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(timeAccum / (timeAccum + (((transitionTime.getValue() * 0.80) - ((transitionTime.getValue() * 0.80) * 0.99)) / 0.99)));
 
-//		const kindr::RotationQuaternionPD & worldToBase = model->getTorsoPtr()->getMeasuredStatePtr()->getOrientationWorldToBase();
-//		const kindr::RotationQuaternionPD & worldToEE = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector();
-//		const kindr::RotationQuaternionPD & baseToEE = worldToEE * worldToBase.inverted();
+	    current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
+	    current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
 
-		std::lock_guard<std::mutex> guard(desLock);
-
-		// TODO reset desired to current after timeout -> when button released no publication of topic
-		// TODO add orientation
-
-		bool output_position = false, output_orientation = false;
-
-		ROS_WARN_COND(output_position, " ");
-		ROS_WARN_COND(output_position, "Old des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
-		ROS_WARN_COND(output_position, "Command add on position is [%4.3f, %4.3f, %4.3f]", pose_msg->pose.position.x, pose_msg->pose.position.y, pose_msg->pose.position.z);
-
-		desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
-        desiredPose[1] = current_pose_sigma_[1] + pose_msg->pose.position.y;
-        desiredPose[2] = current_pose_sigma_[2] + pose_msg->pose.position.z;
-
-        ROS_WARN_COND(output_position, "New des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
-
-        ROS_WARN_COND(output_orientation, " ");
-        ROS_WARN_COND(output_orientation, "Old des position is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
-        ROS_WARN_COND(output_orientation, "Command add on is [%4.2f, %4.2f, %4.2f, %4.2f]", pose_msg->pose.orientation.w, pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
-
-        Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , 0 * pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
-        Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
-        quat_dot = (quat*quat_dot);
-        quat_dot.coeffs()*=0.5;
-
-        desiredPose[3] = current_pose_sigma_[3] + quat_dot.w();
-        desiredPose[4] = current_pose_sigma_[4] + quat_dot.x();
-        desiredPose[5] = current_pose_sigma_[5] + quat_dot.y();
-        desiredPose[6] = current_pose_sigma_[6] + quat_dot.z();
-
-        ROS_WARN_COND(output_orientation, "New des position is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
-
+	    ROS_ERROR_COND(pub_reset, "\n (re-)set initial desired pose, time difference = %4.3f, time out is if >= %4.3f", msg_time - sigma_time_, sigma_timeout_);
+	    ROS_ERROR_COND(pub_reset, "pose msg time (sec) is %4.3f, and last time before is %4.3f", msg_time, sigma_time_);
+	    ROS_ERROR_COND(pub_reset, "init desired pose with initial pose of [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
+	    ROS_ERROR_COND(pub_reset, "and orientation of [%4.3f, %4.3f, %4.3f, %4.3f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
 	}
-	sigma_time_ = pose_msg->header.stamp.sec;
+
+	ROS_WARN_COND(output_position, "\n Old des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
+	ROS_WARN_COND(output_position, "Command add on position is [%4.3f, %4.3f, %4.3f]", pose_msg->pose.position.x, pose_msg->pose.position.y, pose_msg->pose.position.z);
+
+	desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
+    desiredPose[1] = current_pose_sigma_[1] + pose_msg->pose.position.y;
+    desiredPose[2] = current_pose_sigma_[2] + pose_msg->pose.position.z;
+
+    ROS_WARN_COND(output_position, "New des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
+
+    ROS_WARN_COND(output_orientation, "\n Old des position is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
+    ROS_WARN_COND(output_orientation, "Command add on is [%4.2f, %4.2f, %4.2f, %4.2f]", pose_msg->pose.orientation.w, pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
+
+    Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , 0 * pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
+    Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
+    quat_dot = (quat*quat_dot);
+    quat_dot.coeffs()*=0.5;
+
+    // TODO use angular velocity like josh to limit orientation and enable also scaling
+    // TODO service/action call for 3 to 5 D control
+    desiredPose[3] = current_pose_sigma_[3] + quat_dot.w();
+    desiredPose[4] = current_pose_sigma_[4] + quat_dot.x();
+    desiredPose[5] = current_pose_sigma_[5] + quat_dot.y();
+    desiredPose[6] = current_pose_sigma_[6] + quat_dot.z();
+
+    ROS_WARN_COND(output_orientation, "New des position is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
+    sigma_time_ = msg_time;
+
+    // prepare msg and publish
+    geometry_msgs::PoseStamped desiredPose;
+    desiredPose.header.frame_id = "odom";
+    desiredPose.header.stamp = ros::Time::now();
+    desiredPose.pose.position.x = this->desiredPose[0];
+    desiredPose.pose.position.y = this->desiredPose[1];
+    desiredPose.pose.position.z = this->desiredPose[2];
+    desiredPose.pose.orientation.w = this->desiredPose[3];
+
+    // TODO check why in "update" function above the angles negated? why without it mirrored?
+    desiredPose.pose.orientation.x = this->desiredPose[4];
+    desiredPose.pose.orientation.y = this->desiredPose[5];
+    desiredPose.pose.orientation.z = this->desiredPose[6];
+    outputPose_pub.publish(desiredPose);
+
 }
 
 bool HumanInputTrajectoryRos::addParametersToHandler(const std::string &ns) {
