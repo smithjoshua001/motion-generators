@@ -25,9 +25,9 @@ namespace motion_generators {
             void update(double dt) override {
                 //check and shrink distance (position only first)
                 errorPosition = desiredPose.template head<3>() - currentPose.template head<3>();
-                if (errorPosition.norm() > maxDistance) {
+                /*if (errorPosition.norm() > maxDistance) {
                     desiredPose.template head<3>() = currentPose.template head<3>() + (errorPosition * (maxDistance / errorPosition.norm()));
-                }
+                }*/
                 //TODO add orientation limits
             }
 
