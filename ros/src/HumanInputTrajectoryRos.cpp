@@ -57,7 +57,6 @@ void HumanInputTrajectoryRos::update(double dt) {
     }
     if(enable){
         model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->setPositionWorldToEndEffectorInWorldFrame(kindr::Position3D(desiredPose.head<3>()));
-        std::cout<<"MOTION GENERATOR OUTPUT:"<<std::endl<<model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector().transpose()<<std::endl<<std::endl;
 
         loco::RotationQuaternion rotation;
         rotation.w() = this->desiredPose[3];
