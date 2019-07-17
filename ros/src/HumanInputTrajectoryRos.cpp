@@ -48,7 +48,7 @@ void HumanInputTrajectoryRos::update(double dt) {
     }
     if(enable){
         model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->setPositionWorldToEndEffectorInWorldFrame(kindr::Position3D(desiredPose.head<3>()));
-        std::cout<<"MOTION GENERATOR OUTPUT:"<<std::endl<<model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector().transpose()<<std::endl<<std::endl;
+      //  std::cout<<"MOTION GENERATOR OUTPUT:"<<std::endl<<model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector().transpose()<<std::endl<<std::endl;
 
         loco::RotationQuaternion rotation;
         rotation.w() = this->desiredPose[3];
@@ -113,11 +113,19 @@ Eigen::Quaterniond quat_dot(0,axes[0] * maxVel.getValue(),axes[1] * maxVel.getVa
             // std::cout<<"QUAT DOT:: "<<quat_dot.coeffs().transpose()<<std::endl;
             quat_dot = (quat*quat_dot);
             quat_dot.coeffs()*=0.5;
+
             // std::cout<<quat_dot.coeffs().transpose()<<", "<<quat_dot.w()<<std::endl;
             desiredPose[3] += quat_dot.w();
             desiredPose[4] += quat_dot.x();
             desiredPose[5] += quat_dot.y();
             desiredPose[6] += quat_dot.z();
+
+		Eigen::Quaterniond q_d (desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6] ) ;
+		q_d.normalize() ;
+ 		desiredPose[3] = q_d.w();
+            	desiredPose[4] = q_d.x();
+            	desiredPose[5] = q_d.y();
+            	desiredPose[6] = q_d.z();
         }
         // std::cout<<desiredPose.transpose()<<std::endl;
     }
