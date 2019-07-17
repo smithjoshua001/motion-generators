@@ -26,10 +26,10 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 
 find_package(PkgConfig REQUIRED)
-pkg_search_module(RapidJSON REQUIRED RapidJSON rapidjson)
-include_directories(${RapidJSON_INCLUDE_DIRS})
-link_directories(${RapidJSON_LIBRARY_DIR} ${RapidJSON_LIBRARY_DIRS})
-message(STATUS "=============================RAPIDJSON: ${RapidJSON_INCLUDE_DIRS}======================")
+#pkg_search_module(RapidJSON REQUIRED RapidJSON rapidjson)
+#include_directories(${RapidJSON_INCLUDE_DIRS})
+#link_directories(${RapidJSON_LIBRARY_DIR} ${RapidJSON_LIBRARY_DIRS})
+#message(STATUS "=============================RAPIDJSON: ${RapidJSON_INCLUDE_DIRS}======================")
 
 pkg_check_modules(JSON11 REQUIRED json11)
 include_directories(${JSON11_INCLUDE_DIRS})
@@ -56,12 +56,12 @@ INSTALL (
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
   )
 
-  find_package(OROCOS-RTT COMPONENTS rtt-scripting rtt-typekit)
-if (NOT OROCOS-RTT_FOUND)
-  message (ERROR "\nCould not find Orocos-RTT. Please use the shell command\n 'source orocos_toolchain/env.sh' and then run cmake again.")
-else()
-  add_subdirectory(orocos)
-endif()
+ # find_package(OROCOS-RTT COMPONENTS rtt-scripting rtt-typekit)
+#if (NOT OROCOS-RTT_FOUND)
+#  message (ERROR "\nCould not find Orocos-RTT. Please use the shell command\n 'source orocos_toolchain/env.sh' and then run cmake again.")
+#else()
+#  add_subdirectory(orocos)
+#endif()
 
 find_package(SWIG)
 if (NOT SWIG_FOUND)
