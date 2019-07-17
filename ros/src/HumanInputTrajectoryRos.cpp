@@ -188,12 +188,18 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
     desiredPose.pose.position.x = this->desiredPose[0];
     desiredPose.pose.position.y = this->desiredPose[1];
     desiredPose.pose.position.z = this->desiredPose[2];
-    desiredPose.pose.orientation.w = this->desiredPose[3];
 
-    // TODO check why in "update" function above the angles negated? why without it mirrored?
-    desiredPose.pose.orientation.x = this->desiredPose[4];
-    desiredPose.pose.orientation.y = this->desiredPose[5];
-    desiredPose.pose.orientation.z = this->desiredPose[6];
+    Eigen::Quaterniond quat_data(this->desiredPose[3], this->desiredPose[4], this->desiredPose[5], this->desiredPose[6]);
+    Eigen::Quaterniond quat_rot;
+    quat_rot = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ());
+
+    quat_data = quat_data * quat_rot;
+
+    desiredPose.pose.orientation.w = quat_data.w();
+    desiredPose.pose.orientation.x = quat_data.x();
+    desiredPose.pose.orientation.y = quat_data.y();
+    desiredPose.pose.orientation.z = quat_data.z();
+
     outputPose_pub.publish(desiredPose);
 
 }
