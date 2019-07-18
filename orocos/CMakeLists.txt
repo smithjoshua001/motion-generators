@@ -25,6 +25,7 @@ message(STATUS "COSIMAUTILITIES INCLUDE: ${CosimaUtilities-orocos_INCLUDE_DIRS}"
 
 include_directories(
 ${PROJECT_SOURCE_DIR}/include
+${PROJECT_SOURCE_DIR}/orocos/include
 include
 ${USE_OROCOS_INCLUDE_DIRS}
 ${OROCOS-RTT_INCLUDE_DIRS}
@@ -37,7 +38,7 @@ message(STATUS "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 message(STATUS "${RapidJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR}")
 orocos_component(RTT_${CMAKE_PROJECT_NAME}
 ${PROJECT_SOURCE_DIR}/orocos/src/JointDynamicAttractorOrocos.cpp
-${PROJECT_SOURCE_DIR}/orocos/src/TaskDynamicAttractor.cpp
+#${PROJECT_SOURCE_DIR}/orocos/src/TaskDynamicAttractor.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/ModifiedFourierTrajectoryOrocos.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/SineWaveJointOrocos.cpp
 ${PROJECT_SOURCE_DIR}/orocos/src/CJDAOrocos.cpp

@@ -4,15 +4,14 @@
 #include <rst-rt/robot/JointState.hpp>
 #include <CosimaUtilities/Timing.hpp>
 
-class ModifiedFourierTrajectoryOrocos : public RTT::TaskContext, public JointTrajectoryOrocos {
+class ModifiedFourierTrajectoryOrocos : public JointTrajectoryOrocos {
 private:
     // std::shared_ptr<ModifiedFourierTrajectory<float> > trajectory_mft;
     double start_time;
     double eta;
     bool finish;
 public:
-    ModifiedFourierTrajectoryOrocos(std::string name) : RTT::TaskContext(name),
-        JointTrajectoryOrocos(this, std::make_shared < ModifiedFourierTrajectory<float> >()) {
+    ModifiedFourierTrajectoryOrocos(std::string name) : JointTrajectoryOrocos(name, std::make_shared < ModifiedFourierTrajectory<float> >()) {
         // trajectory_mft=this->trajectory
         finish = false;
         eta = 0.001;
@@ -39,7 +38,7 @@ public:
     }
 };
 
-class JointDynamicAttractorOrocos : public RTT::TaskContext, public JointTrajectoryOrocos {
+class JointDynamicAttractorOrocos : public JointTrajectoryOrocos {
 private:
     std::shared_ptr<JointDynamicAttractor<float> > trajectory_jda;
     RTT::InputPort <rstrt::robot::JointState> in_robot_port;
@@ -48,9 +47,8 @@ private:
     bool first_config;
 
 public:
-    JointDynamicAttractorOrocos(std::string name) : RTT::TaskContext(name),
-        trajectory_jda(std::make_shared < JointDynamicAttractor<float> >()),
-        JointTrajectoryOrocos(this, trajectory_jda) {
+    JointDynamicAttractorOrocos(std::string name) : trajectory_jda(std::make_shared < JointDynamicAttractor<float> >()),
+        JointTrajectoryOrocos(name, trajectory_jda) {
         this->addProperty("finished", trajectory_jda->finished);
     }
     bool preparePorts() {
@@ -72,10 +70,10 @@ public:
     }
     void updateHook() {
         if (!first_config) {
-            in_robot_flow = in_robot_port.readNewest(in_robot_var);
+            in_robot_flow = in_robot_port.read(in_robot_var);
             if (in_robot_flow == RTT::NewData) {
                 trajectory_jda->getInitialState().head(trajectory_jda->getDof()) = in_robot_var.angles;
-                trajectory_jda->getInitialState().tail(trajectory_jda->getDof()) = in_robot_var.velocities;
+                trajectory_jda->getInitialState().tail(trajectory_jda->getDof()).setZero();// = in_robot_var.velocities;
                 first_config = true;
             }
         } else {

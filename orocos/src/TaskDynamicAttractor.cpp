@@ -1,5 +1,5 @@
-#include <motion-generators/TaskDynamicAttractor.hpp>
-
+#include "motion-generators/TaskDynamicAttractor.hpp"
+using namespace motion_generators::taskspace;
 TaskDynamicAttractor::TaskDynamicAttractor(std::string const &name) : RTT::TaskContext(name) {
     addOperation("setGain", &TaskDynamicAttractor::setGain, this).doc("set Gains");
     addOperation("setDesiredState", &TaskDynamicAttractor::setDesiredState, this).doc("setDesiredState");
