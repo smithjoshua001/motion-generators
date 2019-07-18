@@ -9,15 +9,17 @@
 #include <rst-rt/kinematics/JointAccelerations.hpp>
 #include <CosimaUtilities/Timing.hpp>
 #include <memory>
+#include "motion-generators/JointTrajectory.hpp"
 
-class JointTrajectoryOrocos {
+class JointTrajectoryOrocos : public RTT::TaskContext {
 protected:
-    RTT::TaskContext *task;
 
     size_t dof;
     std::shared_ptr<JointTrajectory<float> > trajectory;
 
     double start_time, current_time;
+    long long M_start_time;
+    RTT::os::TimeService *ts = RTT::os::TimeService::Instance();
 
     RTT::OutputPort<rstrt::kinematics::JointAngles> out_position_port;
     rstrt::kinematics::JointAngles out_position_var;
@@ -28,10 +30,13 @@ protected:
     RTT::OutputPort<rstrt::kinematics::JointAccelerations> out_acceleration_port;
     rstrt::kinematics::JointAccelerations out_acceleration_var;
 public:
-    JointTrajectoryOrocos(RTT::TaskContext *task, std::shared_ptr<JointTrajectory<float> > trajectory) {
-        this->task = task;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    JointTrajectoryOrocos(std::string name, const std::shared_ptr<JointTrajectory<float> > &trajectory) : RTT::TaskContext(name) {
         this->trajectory = trajectory;
-        task->addOperation("loadFromJSON", &JointTrajectoryOrocos::loadFromJSON, this);
+        this->addOperation("loadFromJSON", &JointTrajectoryOrocos::loadFromJSON, this);
+    }
+    virtual ~JointTrajectoryOrocos() {
+        std::cout << "DESTROYING JTO!!" << std::endl;
     }
 
     void loadFromJSON(std::string filename) {
@@ -47,7 +52,8 @@ public:
     }
 
     bool preparePorts() {
-        task->ports()->clear();
+        std::cout << "LOADING PORTS" << std::endl;
+        this->ports()->clear();
         out_position_var = rstrt::kinematics::JointAngles(dof);
         out_velocity_var = rstrt::kinematics::JointVelocities(dof);
         out_acceleration_var = rstrt::kinematics::JointAccelerations(dof);
@@ -55,27 +61,29 @@ public:
         out_position_port.setName("out_position_port");
         out_position_port.doc("Output port for sending position values");
         out_position_port.setDataSample(out_position_var);
-        task->ports()->addPort(out_position_port);
+        this->ports()->addPort(out_position_port);
 
         out_velocity_port.setName("out_velocity_port");
         out_velocity_port.doc("Output port for sending velocity values");
         out_velocity_port.setDataSample(out_velocity_var);
-        task->ports()->addPort(out_velocity_port);
+        this->ports()->addPort(out_velocity_port);
 
         out_acceleration_port.setName("out_acceleration_port");
         out_acceleration_port.doc("Output port for sending acceleration values");
         out_acceleration_port.setDataSample(out_acceleration_var);
-        task->ports()->addPort(out_acceleration_port);
+        this->ports()->addPort(out_acceleration_port);
         return true;
     }
 
     bool startHook() {
-        start_time = CosimaUtilities::getCurrentTime();
-        return trajectory->getRunnable();
+        M_start_time = ts->getTicks();
+        return this->trajectory->getRunnable();
     }
 
     bool configureHook() {
-        return trajectory->getRunnable() && preparePorts();
+        std::cout << "CONFIGURING HOOK!!!" << std::endl;
+        std::cout << "RUNNABLE? " << this->trajectory->getRunnable() << std::endl;
+        return this->trajectory->getRunnable() && preparePorts();
     }
 
     void stopHook() {}
@@ -83,7 +91,7 @@ public:
     void cleanupHook() {}
 
     void updateHook() {
-        current_time = CosimaUtilities::getCurrentTime() - start_time;
+        current_time = RTT::os::TimeService::ticks2nsecs(ts->ticksSince(M_start_time)) * 1e-9;
         trajectory->update(current_time);
         out_position_var.angles = trajectory->getPosition();
         out_velocity_var.velocities = trajectory->getVelocity();

@@ -4,16 +4,18 @@
 #include <CosimaUtilities/Timing.hpp>
 #include "motion-generators/JointTrajectory.hpp"
 
-template <typename T> class SineWaveJoint : public JointTrajectory<T> {
+template <typename T> class SineCosineJoint : public JointTrajectory<T> {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    SineWaveJoint() : JointTrajectory<T>() {}
-    SineWaveJoint(size_t dof) : JointTrajectory<T>(dof) {
+    SineCosineJoint() : JointTrajectory<T>() {}
+    SineCosineJoint(size_t dof) : JointTrajectory<T>(dof) {
         // this->dof = dof;
         freq.resize(this->dof);
         freq.setZero();
         scale.resize(this->dof);
         scale.setZero();
+        freqCosine.resize(this->dof);
+        freqCosine.setZero();
         offset.resize(this->dof);
         offset.setZero();
         // freq = (Eigen::Matrix<T, Eigen::Dynamic, 1>::Random(this->DOF));
@@ -23,7 +25,7 @@ public:
         // scale /= T(2.0);
         this->simulation_period = 0;
     }
-    virtual ~SineWaveJoint() {}
+    virtual ~SineCosineJoint() {}
 
     template<typename Derived> void setFrequencies(const Eigen::ArrayBase<Derived> &frequencies) {
         freq = frequencies;
@@ -58,9 +60,9 @@ public:
 
     void update(double time = 0) override {
         assert(this->runnable);
-        this->position = scale * (freq * time).sin() + offset;
-        this->velocity = scale * freq * (freq * time).cos();
-        this->acceleration = -scale * freq * freq * (freq * time).sin();
+        this->position = 0.5 * scale * ((freq * time).sin() + (freqCosine * freq * time).cos()) + offset;
+        this->velocity = 0.5 * scale * (freq * (freq * time).cos() - freqCosine * freq * (freqCosine * freq * time).sin());
+        this->acceleration = 0.5 * scale * (-freq * freq * (freq * time).sin() - freqCosine * freqCosine * freq * freq * (freqCosine * freq * time).cos());;
     }
 
     void loadFromJSON(std::string filename) override {
@@ -83,10 +85,12 @@ public:
         this->dof = this->json["dof"].number_value();
         setDof(this->dof);
         freq.resize(this->dof);
+        freqCosine.resize(this->dof);
         scale.resize(this->dof);
         offset.resize(this->dof);
         for (size_t i = 0; i < this->dof; i++) {
             freq(i) = T(this->json["frequency"][i].number_value());
+            freqCosine(i) = T(this->json["cosfrequency"][i].number_value());
             scale(i) = T(this->json["scale"][i].number_value());
             offset(i) = T(this->json["offset"][i].number_value());
         }
@@ -99,6 +103,7 @@ private:
     Eigen::Array<T, Eigen::Dynamic, 1> freq;
     Eigen::Array<T, Eigen::Dynamic, 1> scale;
     Eigen::Array<T, Eigen::Dynamic, 1> offset;
+    Eigen::Array<T, Eigen::Dynamic, 1> freqCosine;
 
     T simulation_period;
 };

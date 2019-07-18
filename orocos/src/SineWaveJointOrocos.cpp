@@ -1,39 +1,61 @@
 #include <motion-generators/SineWaveJoint.hpp>
 #include <motion-generators/JointTrajectoryOrocos.hpp>
 
-class SineWaveJointOrocos : public RTT::TaskContext, public JointTrajectoryOrocos {
+class SineWaveJointOrocos : public JointTrajectoryOrocos {
 private:
     // std::shared_ptr<SineWaveJoint<float> > trajectory_sine;
     double start_time;
     double eta;
     bool finish;
 public:
-    SineWaveJointOrocos(std::string name) : RTT::TaskContext(name),
-        //trajectory_sine(std::make_shared < SineWaveJoint<float> >()),
-        JointTrajectoryOrocos(this, std::make_shared < SineWaveJoint<float> >()) {
+    SineWaveJointOrocos(std::string name) :
+        JointTrajectoryOrocos(name, std::shared_ptr<SineWaveJoint<float> > (new SineWaveJoint<float>())) {
         finish = false;
-        addProperty("finish",finish);
+        this->addProperty("finish", finish);
         eta = 0.001;
+    }
+    virtual ~SineWaveJointOrocos() {
+        std::cout << "DESTROY SWJO" << std::endl;
     }
     bool startHook() {
         start_time = CosimaUtilities::getCurrentTime();
         return JointTrajectoryOrocos::startHook();
     }
-    bool configureHook() {
-        return JointTrajectoryOrocos::configureHook();
-    }
-    void updateHook() {
-        
-            JointTrajectoryOrocos::updateHook();
+    void updateHook() override {
+        JointTrajectoryOrocos::updateHook();
         if (finish && std::fmod(CosimaUtilities::getCurrentTime() - start_time, this->getTrajectory()->getPeriodLength()) < eta) {
             stopHook();
         }
     }
-    void stopHook() {
-        JointTrajectoryOrocos::stopHook();
+};
+
+#include <motion-generators/SineCosineJoint.hpp>
+class SineCosineJointOrocos : public JointTrajectoryOrocos {
+private:
+    // std::shared_ptr<SineWaveJoint<float> > trajectory_sine;
+    double start_time;
+    double eta;
+    bool finish;
+public:
+    SineCosineJointOrocos(std::string name) :
+        JointTrajectoryOrocos(name, std::shared_ptr<SineCosineJoint<float> > (new SineCosineJoint<float>())) {
+        finish = false;
+        this->addProperty("finish", finish);
+        eta = 0.001;
     }
-    void cleanupHook() {
-        JointTrajectoryOrocos::cleanupHook();
+    virtual ~SineCosineJointOrocos() {
+        std::cout << "DESTROY SWJO" << std::endl;
+    }
+    bool startHook() {
+        start_time = CosimaUtilities::getCurrentTime();
+        return JointTrajectoryOrocos::startHook();
+    }
+    void updateHook() override {
+        JointTrajectoryOrocos::updateHook();
+        if (finish && std::fmod(CosimaUtilities::getCurrentTime() - start_time, this->getTrajectory()->getPeriodLength()) < eta) {
+            stopHook();
+        }
     }
 };
 ORO_LIST_COMPONENT_TYPE(SineWaveJointOrocos);
+ORO_LIST_COMPONENT_TYPE(SineCosineJointOrocos);

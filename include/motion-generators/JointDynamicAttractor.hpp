@@ -31,7 +31,7 @@ public:
     void setInitialState(Eigen::Matrix<T, Eigen::Dynamic, 1> initialState) {
         state = initialState;
     }
-    void setAccelerationOffset(const Eigen::Matrix<T,Eigen::Dynamic,1>& accoff){
+    void setAccelerationOffset(const Eigen::Matrix<T, Eigen::Dynamic, 1> &accoff) {
         this->accelerationOffset = accoff;
     }
     Eigen::Matrix<T, Eigen::Dynamic, 1> &getInitialState() {
@@ -52,6 +52,7 @@ public:
 
         gainMatrix.block(this->dof, this->dof, this->dof, this->dof).setIdentity();
         gainMatrix.block(this->dof, this->dof, this->dof, this->dof) *= -2 * gain;
+        this->gain = gain;
     }
 
     void setSimulationPeriod(T sim_period) {
@@ -83,7 +84,7 @@ public:
         state_dot = gainMatrix * (state - des_state);
         state_dot.head(this->dof) += des_state.tail(this->dof);
         state_dot.tail(this->dof) += accelerationOffset;
-        
+
         state = state + state_dot * diff_time;
         this->position = state.head(this->dof);
         this->velocity = state.tail(this->dof);
@@ -113,7 +114,7 @@ public:
 
     bool finished;
 
-    void setLimit(T limit){
+    void setLimit(T limit) {
         this->limit = limit;
     }
 
@@ -125,4 +126,5 @@ private:
     double prev_time, diff_time;
     T sim_period;
     T limit;
+    T gain;
 };

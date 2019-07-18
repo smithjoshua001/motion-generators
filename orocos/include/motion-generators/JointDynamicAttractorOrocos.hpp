@@ -14,16 +14,18 @@
 #include "motion-generators/JointDynamicAttractor.hpp"
 #include "motion-generators/JointTrajectoryOrocos.hpp"
 
-class JointDynamicAttractorOrocos : public RTT::TaskContext, public JointTrajectoryOrocos {
+class JointDynamicAttractorOrocos : public JointTrajectoryOrocos {
 public:
     JointDynamicAttractorOrocos(std::string const &name);
 
     // RTT::TaskContext methods that are needed for any standard component and
     // should be implemented by user
     bool configureHook();
-    bool startHook() {return JointTrajectoryOrocos::startHook();}
+    bool startHook() {
+        return JointTrajectoryOrocos::startHook();
+    }
     void updateHook();
-    void stopHook() {JointTrajectoryOrocos::stopHook();}
+    void stopHook() {first_config = false; JointTrajectoryOrocos::stopHook();}
     void cleanupHook() {JointTrajectoryOrocos::cleanupHook();}
 
 private:

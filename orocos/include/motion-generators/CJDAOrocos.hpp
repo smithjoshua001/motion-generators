@@ -14,7 +14,7 @@
 #include "motion-generators/JointDynamicAttractor.hpp"
 #include "motion-generators/JointTrajectoryOrocos.hpp"
 
-class CJDAOrocos : public RTT::TaskContext, public JointTrajectoryOrocos {
+class CJDAOrocos : public JointTrajectoryOrocos {
 public:
     CJDAOrocos(std::string const &name);
 
@@ -22,8 +22,9 @@ public:
     // should be implemented by user
     bool configureHook();
     bool startHook() {
-    stop = false;
-    return JointTrajectoryOrocos::startHook();}
+        stop = false;
+        return JointTrajectoryOrocos::startHook();
+    }
     void updateHook();
     void stopHook() {JointTrajectoryOrocos::stopHook();}
     void cleanupHook() {JointTrajectoryOrocos::cleanupHook();}
@@ -36,15 +37,15 @@ private:
     RTT::FlowStatus in_robotstatus_flow;
     rstrt::robot::JointState in_robotstatus_var;
 
-RTT::InputPort<rstrt::kinematics::JointAngles> in_despos_port;
+    RTT::InputPort<rstrt::kinematics::JointAngles> in_despos_port;
     RTT::FlowStatus in_despos_flow;
     rstrt::kinematics::JointAngles in_despos_var;
 
-RTT::InputPort<rstrt::kinematics::JointVelocities> in_desvel_port;
+    RTT::InputPort<rstrt::kinematics::JointVelocities> in_desvel_port;
     RTT::FlowStatus in_desvel_flow;
     rstrt::kinematics::JointVelocities in_desvel_var;
 
-RTT::InputPort<rstrt::kinematics::JointAccelerations> in_desacc_port;
+    RTT::InputPort<rstrt::kinematics::JointAccelerations> in_desacc_port;
     RTT::FlowStatus in_desacc_flow;
     rstrt::kinematics::JointAccelerations in_desacc_var;
 
