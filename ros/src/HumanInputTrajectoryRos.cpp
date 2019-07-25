@@ -137,7 +137,7 @@ Eigen::Quaterniond quat_dot(0,axes[0] * maxVel.getValue(),axes[1] * maxVel.getVa
 
 void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::ConstPtr & pose_msg){
 	// TODO remove debug outut options
-    bool pub_reset = false, output_position = false, output_orientation = false;
+    bool pub_reset = true, output_position = true, output_orientation = true;
 
 	std::lock_guard<std::mutex> guard(desLock);
 	double msg_time = (double)pose_msg->header.stamp.sec + 1e-9*(double)pose_msg->header.stamp.nsec;
@@ -168,16 +168,16 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 
 
     ROS_WARN_COND(output_position, "\n Old des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
-	ROS_WARN_COND(output_position, "Command add on position is [%4.3f, %4.3f, %4.3f]", pose_msg->pose.position.x, pose_msg->pose.position.y, pose_msg->pose.position.z);
+  //  ROS_WARN_COND(output_position, "Command add on position is [%4.3f, %4.3f, %4.3f]", pose_msg->pose.position.x, pose_msg->pose.position.y, pose_msg->pose.position.z);
 
-	desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
+    desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
     desiredPose[1] = current_pose_sigma_[1] + pose_msg->pose.position.y;
     desiredPose[2] = current_pose_sigma_[2] + pose_msg->pose.position.z;
 
     ROS_WARN_COND(output_position, "New des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
 
-    ROS_WARN_COND(output_orientation, "\n Old des position is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
-    ROS_WARN_COND(output_orientation, "Command add on is [%4.2f, %4.2f, %4.2f, %4.2f]", pose_msg->pose.orientation.w, pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
+    ROS_WARN_COND(output_orientation, "\n Old des orientation is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
+//    ROS_WARN_COND(output_orientation, "Command add on is [%4.2f, %4.2f, %4.2f, %4.2f]", pose_msg->pose.orientation.w, pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
 
     Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , 0 * pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
     Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
@@ -191,7 +191,7 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
     desiredPose[5] = current_pose_sigma_[5] + quat_dot.y();
     desiredPose[6] = current_pose_sigma_[6] + quat_dot.z();
 
-    ROS_WARN_COND(output_orientation, "New des position is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
+//    ROS_WARN_COND(output_orientation, "New des orientation is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
     sigma_time_ = msg_time;
 
     // prepare msg and publish
@@ -208,12 +208,14 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 
     quat_data = quat_data * quat_rot;
 
-    quat_data.normalize();
+    quat_data.normalize()
+
+    ROS_WARN_COND(output_orientation, "New des orientation is [%4.2f, %4.2f, %4.2f, %4.2f]", quat_data.w(), quat_data.x(), quat_data.y(), quat_data.z());
 
     desiredPose.pose.orientation.w = quat_data.w();
-    desiredPose.pose.orientation.x = -quat_data.x();
-    desiredPose.pose.orientation.y = -quat_data.y();
-    desiredPose.pose.orientation.z = -quat_data.z();
+    desiredPose.pose.orientation.x = quat_data.x();
+    desiredPose.pose.orientation.y = quat_data.y();
+    desiredPose.pose.orientation.z = quat_data.z();
 
     outputPose_pub.publish(desiredPose);
 
