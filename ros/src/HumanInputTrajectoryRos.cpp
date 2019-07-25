@@ -208,6 +208,8 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 
     quat_data = quat_data * quat_rot;
 
+    quat_data.normalize();
+
     desiredPose.pose.orientation.w = quat_data.w();
     desiredPose.pose.orientation.x = -quat_data.x();
     desiredPose.pose.orientation.y = -quat_data.y();
