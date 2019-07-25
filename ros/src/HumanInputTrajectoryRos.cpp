@@ -22,6 +22,7 @@ HumanInputTrajectoryRos::HumanInputTrajectoryRos(std::string const &name, ros::N
     current_pose_sigma_ << 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0;
     desired_pose_sigma_ << 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0;
     orientation_control_old_ = 0;
+    use_sigma_haptic_ = true;
 
     timeAccum =0;
 }
