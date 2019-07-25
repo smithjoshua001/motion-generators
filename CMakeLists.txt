@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 2.8.3)
 # This creates a standard cmake project. You may extend this file with
 # any cmake macro you see fit.
 #
-project(MotionGenerators)
+project(motion_generators)
 INCLUDE(GNUInstallDirs)
 
 set(CMAKE_BUILD_TYPE Release)
@@ -25,18 +25,16 @@ find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 
-find_package(PkgConfig REQUIRED)
-pkg_search_module(RapidJSON REQUIRED RapidJSON rapidjson)
-include_directories(${RapidJSON_INCLUDE_DIRS})
+find_package(RapidJSON REQUIRED)
+include_directories(BEFORE SYSTEM ${RapidJSON_INCLUDE_DIRS})
 link_directories(${RapidJSON_LIBRARY_DIR} ${RapidJSON_LIBRARY_DIRS})
-message(STATUS "=============================RAPIDJSON: ${RapidJSON_INCLUDE_DIRS}======================")
 
-pkg_check_modules(JSON11 REQUIRED json11)
-include_directories(${JSON11_INCLUDE_DIRS})
-link_directories(${JSON11_LIBRARY_DIR} ${JSON11_LIBRARY_DIRS})
+find_package(PkgConfig REQUIRED)
+pkg_search_module(json11 REQUIRED json11)
+include_directories(${json11_INCLUDE_DIRS})
 
-list(APPEND DEPENDENCY_LIBRARIES ${JSON11_LIBRARIES} ${RapidJSON_LIBRARIES} ${EIGEN3_LIBRARIES})
-list(APPEND DEPENDENCY_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include" ${RapidJSON_INCLUDE_DIRS} ${JSON11_INCLUDE_DIR} ${RapidJSON_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR})
+list(APPEND DEPENDENCY_LIBRARIES ${json11_LIBRARIES} ${RapidJSON_LIBRARIES} ${EIGEN3_LIBRARIES})
+list(APPEND DEPENDENCY_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/include" ${RapidJSON_INCLUDE_DIRS} ${json11_INCLUDE_DIR} ${RapidJSON_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR})
 
 # add_definitions(-DTIMING)
 
@@ -56,20 +54,19 @@ INSTALL (
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
   )
 
-  find_package(OROCOS-RTT COMPONENTS rtt-scripting rtt-typekit)
-if (NOT OROCOS-RTT_FOUND)
-  message (ERROR "\nCould not find Orocos-RTT. Please use the shell command\n 'source orocos_toolchain/env.sh' and then run cmake again.")
-else()
-  add_subdirectory(orocos)
-endif()
+#  find_package(OROCOS-RTT QUIET COMPONENTS rtt-scripting rtt-typekit )
+#if (NOT OROCOS-RTT_FOUND)
+#  message (ERROR "\nCould not find Orocos-RTT. Please use the shell command\n 'source orocos_toolchain/env.sh' and then run cmake again.")
+#else()
+#  add_subdirectory(orocos)
+#endif()
 
-find_package(SWIG)
-if (NOT SWIG_FOUND)
+#find_package(SWIG QUIET)
+#if (NOT SWIG_FOUND OR NOT OROCOS-RTT_FOUND)
 #message (ERROR "\nCould not find SWIG.")
-else()
-  #add_subdirectory(python)
-endif()
-if(DEFINED ENV{ROS_DISTRO})
-include(ros/CMakeLists.txt)
-endif()
+#else()
+#  add_subdirectory(python)
+#endif()
+
+include (ros/CMakeLists.txt)
 include(vscode OPTIONAL)

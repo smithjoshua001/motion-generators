@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>MotionGenerators</name>
+  <name>motion_generators</name>
   <version>0.2.0</version>
   <description>The MotionGenerators package</description>
   <maintainer email="smithjoshua001@aol.co.uk">Joshua Smith</maintainer>
@@ -24,5 +24,4 @@
 <depend>tf2_geometry_msgs</depend>
 <depend>tf2</depend>
 <depend>sensor_msgs</depend>
-<depend>JSON11</depend>
 </package>

@@ -21,6 +21,7 @@ HumanInputTrajectoryRos::HumanInputTrajectoryRos(std::string const &name, ros::N
     sigma_time_ = ros::Time::now().toSec();
     current_pose_sigma_ << 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0;
     desired_pose_sigma_ << 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0;
+    orientation_control_old_ = 0;
 
     timeAccum =0;
 }
@@ -45,7 +46,7 @@ void HumanInputTrajectoryRos::update(double dt) {
         model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(timeAccum / (timeAccum + (((transitionTime.getValue() * 0.80) - ((transitionTime.getValue() * 0.80) * 0.99)) / 0.99)));
         desiredPose.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
         desiredPose.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
-	desiredPose.tail<3>() = -desiredPose.tail<3>();
+        desiredPose.tail<3>() = -desiredPose.tail<3>();
     }
     if (enable && timeAccum > transitionTime.getValue()) {
         std::lock_guard<std::mutex> guard(desLock);
@@ -76,6 +77,7 @@ void HumanInputTrajectoryRos::update(double dt) {
         desiredPose.pose.orientation.y = -rotation.y();
         desiredPose.pose.orientation.z = -rotation.z();
 
+        // TODO fix that hardcoded piece of a bitch
         if(!use_sigma_haptic_)
         	outputPose_pub.publish(desiredPose);
     }
@@ -139,21 +141,32 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 	std::lock_guard<std::mutex> guard(desLock);
 	double msg_time = (double)pose_msg->header.stamp.sec + 1e-9*(double)pose_msg->header.stamp.nsec;
 
-	if((current_pose_sigma_.head(3).sum() == 0 && current_pose_sigma_.tail(3).sum() == 0 && current_pose_sigma_[3] == 1) ||//not init
-			msg_time - sigma_time_ >= sigma_timeout_){// timeout
-		model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setShouldBeGrounded(true);
-	    model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(timeAccum / (timeAccum + (((transitionTime.getValue() * 0.80) - ((transitionTime.getValue() * 0.80) * 0.99)) / 0.99)));
+	// TODO make the topic name flexible through a config maybe?
+	int orientation_control = 0;
+	ros::param::get("/HQP_topic_name", orientation_control);
+
+	// TODO do we need this?
+//	model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setShouldBeGrounded(true);
+//    model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setStancePhase(timeAccum / (timeAccum + (((transitionTime.getValue() * 0.80) - ((transitionTime.getValue() * 0.80) * 0.99)) / 0.99)));
+
+	model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateDesiredPtr()->setPositionWorldToEndEffectorInWorldFrame(kindr::Position3D(desiredPose.head<3>()));
+
+    if((current_pose_sigma_.head(3).sum() == 0 && current_pose_sigma_.tail(3).sum() == 0 && current_pose_sigma_[3] == 1) ||//has not been initialized
+			msg_time - sigma_time_ >= sigma_timeout_ ||// timeout
+			orientation_control != orientation_control_old_){// change in DoF control -> pose needs update, especially orientation
 
 	    current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
 	    current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+	    current_pose_sigma_.tail<3>() = -current_pose_sigma_.tail<3>();
 
 	    ROS_ERROR_COND(pub_reset, "\n (re-)set initial desired pose, time difference = %4.3f, time out is if >= %4.3f", msg_time - sigma_time_, sigma_timeout_);
 	    ROS_ERROR_COND(pub_reset, "pose msg time (sec) is %4.3f, and last time before is %4.3f", msg_time, sigma_time_);
 	    ROS_ERROR_COND(pub_reset, "init desired pose with initial pose of [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
 	    ROS_ERROR_COND(pub_reset, "and orientation of [%4.3f, %4.3f, %4.3f, %4.3f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
-	}
+    }
 
-	ROS_WARN_COND(output_position, "\n Old des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
+
+    ROS_WARN_COND(output_position, "\n Old des position is [%4.3f, %4.3f, %4.3f]", desiredPose[0], desiredPose[1], desiredPose[2]);
 	ROS_WARN_COND(output_position, "Command add on position is [%4.3f, %4.3f, %4.3f]", pose_msg->pose.position.x, pose_msg->pose.position.y, pose_msg->pose.position.z);
 
 	desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
@@ -195,12 +208,13 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
     quat_data = quat_data * quat_rot;
 
     desiredPose.pose.orientation.w = quat_data.w();
-    desiredPose.pose.orientation.x = quat_data.x();
-    desiredPose.pose.orientation.y = quat_data.y();
-    desiredPose.pose.orientation.z = quat_data.z();
+    desiredPose.pose.orientation.x = -quat_data.x();
+    desiredPose.pose.orientation.y = -quat_data.y();
+    desiredPose.pose.orientation.z = -quat_data.z();
 
     outputPose_pub.publish(desiredPose);
 
+    orientation_control_old_ = orientation_control;
 }
 
 bool HumanInputTrajectoryRos::addParametersToHandler(const std::string &ns) {
