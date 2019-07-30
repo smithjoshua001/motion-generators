@@ -162,11 +162,11 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 		desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
 		desiredPose[1] = current_pose_sigma_[1] + pose_msg->pose.position.y;
 		desiredPose[2] = current_pose_sigma_[2] + pose_msg->pose.position.z;
-                Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
-                Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.z, pose_msg->pose.orientation.y,pose_msg->pose.orientation.x);
-
-            quat_dot = (quat*quat_dot);
-            std::cout<<"New des orientation is "<< quat_dot.w()<<", "<<quat_dot.x()<<", "<<quat_dot.y()<<", "<<quat_dot.z()<<std::endl;
+//                Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
+//                Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.z, pose_msg->pose.orientation.y,pose_msg->pose.orientation.x);
+//
+//            quat_dot = (quat*quat_dot);
+//            std::cout<<"New des orientation is "<< quat_dot.w()<<", "<<quat_dot.x()<<", "<<quat_dot.y()<<", "<<quat_dot.z()<<std::endl;
 		if(orientation_control == 1){
 			Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
 //			Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
