@@ -5,7 +5,7 @@ using namespace motion_generators::taskspace;
 HumanInputTrajectoryRos::HumanInputTrajectoryRos(std::string const &name, ros::NodeHandle &nh, loco::WholeBody *model) : HumanInputTrajectory<double>(),
     tfListener(tfBuffer) {
     this->name = name;
-    std::cout << "SETTING MODEL!!!" << std::endl;
+    std::cout << "SETTING MODEL!!!NEW JOSH!!!" << std::endl;
     this->model = model;
     if (!this->model) {
         std::cout << "NO MODEL??" << std::endl;
@@ -74,9 +74,9 @@ void HumanInputTrajectoryRos::update(double dt) {
         desiredPose.pose.position.y = this->desiredPose[1];
         desiredPose.pose.position.z = this->desiredPose[2];
         desiredPose.pose.orientation.w = rotation.w();
-        desiredPose.pose.orientation.x = -rotation.x();
-        desiredPose.pose.orientation.y = -rotation.y();
-        desiredPose.pose.orientation.z = -rotation.z();
+        desiredPose.pose.orientation.x = rotation.x();
+        desiredPose.pose.orientation.y = rotation.y();
+        desiredPose.pose.orientation.z = rotation.z();
 
        	outputPose_pub.publish(desiredPose);
     }
@@ -87,6 +87,7 @@ void HumanInputTrajectoryRos::reset() {
     std::lock_guard<std::mutex> guard(desLock);
     currentPose.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
     currentPose.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+    std::cout<<"RESET CURR POSE: "<<currentPose.transpose()<<std::endl;
     currentPose.tail<3>() = -currentPose.tail<3>();
     desiredPose = currentPose;
 
@@ -148,10 +149,10 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 		reset();
 
 		std::lock_guard<std::mutex> guard(desLock);
-		current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
-		current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
-		current_pose_sigma_.tail<3>() = -current_pose_sigma_.tail<3>();
-
+		//current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
+		//current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+		//current_pose_sigma_.tail<3>() = -current_pose_sigma_.tail<3>();
+		current_pose_sigma_=currentPose;
 		enable = false;
 	} else {
 		enable = true;
@@ -161,7 +162,11 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 		desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
 		desiredPose[1] = current_pose_sigma_[1] + pose_msg->pose.position.y;
 		desiredPose[2] = current_pose_sigma_[2] + pose_msg->pose.position.z;
+                Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
+                Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.z, pose_msg->pose.orientation.y,pose_msg->pose.orientation.x);
 
+            quat_dot = (quat*quat_dot);
+            std::cout<<"New des orientation is "<< quat_dot.w()<<", "<<quat_dot.x()<<", "<<quat_dot.y()<<", "<<quat_dot.z()<<std::endl;
 		if(orientation_control == 1){
 			Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
 //			Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);

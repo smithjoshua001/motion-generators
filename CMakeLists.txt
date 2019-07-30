@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 2.8.3)
 # This creates a standard cmake project. You may extend this file with
 # any cmake macro you see fit.
 #
-project(motion_generators)
+project(MotionGenerators)
 INCLUDE(GNUInstallDirs)
 
 set(CMAKE_BUILD_TYPE Release)
