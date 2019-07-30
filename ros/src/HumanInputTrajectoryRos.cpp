@@ -87,7 +87,7 @@ void HumanInputTrajectoryRos::reset() {
     std::lock_guard<std::mutex> guard(desLock);
     currentPose.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
     currentPose.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
-    currentPose.tail<3>()=-currentPose.tail<3>();
+    currentPose.tail<3>() = -currentPose.tail<3>();
     desiredPose = currentPose;
 
     // model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setSwingPhase(0.0);
@@ -168,9 +168,9 @@ void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::Co
 			Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.z, pose_msg->pose.orientation.y, pose_msg->pose.orientation.x);
 
             quat_dot = (quat*quat_dot);
-            quat_dot.coeffs()*=0.5;
+//            quat_dot.coeffs()*=0.5;
 
-            quat_dot.normalize();
+            //quat_dot.normalize();
 
             desiredPose[3] = quat_dot.w();
             desiredPose[4] = quat_dot.x();
