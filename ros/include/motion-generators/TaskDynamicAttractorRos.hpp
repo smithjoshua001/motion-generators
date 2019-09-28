@@ -8,7 +8,7 @@
 #include <Eigen/Dense>
 #include <kindr/Core>
 #include <loco/common/loco_common.hpp>
-#include <quadruped_model/quadruped_model.hpp>
+#include <anymal_model/AnymalModel.hpp>
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseStamped.h>

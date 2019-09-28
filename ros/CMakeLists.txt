@@ -4,7 +4,7 @@ set(CMAKE_MODULE_PATH "${newstring}")
 find_package(catkin REQUIRED
    COMPONENTS
    loco
-   loco_ros_quadruped
+   loco_ros_anymal
    anymal_msgs
    kindr_ros
    parameter_handler
@@ -14,8 +14,8 @@ find_package(catkin REQUIRED
     robot_state_publisher
     tf2
     tf2_ros
-    quadruped_model
-    quadruped_description
+    anymal_model
+    anymal_description
     tf2_geometry_msgs
     sensor_msgs
     )
@@ -36,7 +36,7 @@ set(JSON11_LIBRARIES "${json11_LIBRARY}")
     ${CMAKE_PROJECT_NAME}
     CATKIN_DEPENDS
     loco
-    loco_ros_quadruped
+    loco_ros_anymal
     parameter_handler
    anymal_msgs
    kindr_ros
@@ -47,8 +47,8 @@ set(JSON11_LIBRARIES "${json11_LIBRARY}")
     tf2
     tf2_ros
     kindr
-    quadruped_model
-    quadruped_description
+    anymal_model
+    anymal_description
     tf2_geometry_msgs
     sensor_msgs
     DEPENDS 

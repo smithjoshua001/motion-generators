@@ -56,12 +56,12 @@ INSTALL (
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
   )
 
-  find_package(OROCOS-RTT COMPONENTS rtt-scripting rtt-typekit)
-if (NOT OROCOS-RTT_FOUND)
-  message (ERROR "\nCould not find Orocos-RTT. Please use the shell command\n 'source orocos_toolchain/env.sh' and then run cmake again.")
-else()
-  add_subdirectory(orocos)
-endif()
+  #find_package(OROCOS-RTT COMPONENTS rtt-scripting rtt-typekit)
+#if (NOT OROCOS-RTT_FOUND)
+#  message (ERROR "\nCould not find Orocos-RTT. Please use the shell command\n 'source orocos_toolchain/env.sh' and then run cmake again.")
+#else()
+#  add_subdirectory(orocos)
+#endif()
 
 find_package(SWIG)
 if (NOT SWIG_FOUND)

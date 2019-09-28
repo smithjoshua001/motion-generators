@@ -8,10 +8,9 @@
   <license>Proprietary</license>
   <url type="website">https://bitbucket.org/mistrygroup/MotionGenerators</url>
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>quadruped_model</depend>
-  <depend>quadruped_description</depend>
+  <depend>anymal_description</depend>
   <depend>loco</depend>
-<depend>loco_ros_quadruped</depend>
+<depend>loco_ros_anymal</depend>
 <depend>parameter_handler</depend>
 <depend>anymal_msgs</depend>
 <depend>kindr_ros</depend>
@@ -25,4 +24,5 @@
 <depend>tf2</depend>
 <depend>sensor_msgs</depend>
 <depend>JSON11</depend>
+<depend>anymal_model</depend>
 </package>

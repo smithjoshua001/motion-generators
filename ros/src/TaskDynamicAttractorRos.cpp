@@ -64,7 +64,7 @@ void TaskDynamicAttractorRos::reset() {
     TaskDynamicAttractor::reset();
     model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setSwingPhase(0.0);
 }
-using QD = quadruped_model::QuadrupedModel::QuadrupedDescription;
+using AD = anymal_description::AnymalDescription;
 void TaskDynamicAttractorRos::setDesiredPose(const geometry_msgs::PoseStamped::ConstPtr &msg) {
     std::cout << "RECEIVED DESIRED POSE!!" << std::endl;
     geometry_msgs::PoseStamped desiredPose;

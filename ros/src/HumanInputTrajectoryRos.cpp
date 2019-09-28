@@ -82,7 +82,7 @@ void HumanInputTrajectoryRos::reset() {
 
     // model->getLegsPtr()->getPtr(swing_leg.getValue())->getContactSchedulePtr()->setSwingPhase(0.0);
 }
-using QD = quadruped_model::QuadrupedModel::QuadrupedDescription;
+using AD = anymal_description::AnymalDescription;
 void HumanInputTrajectoryRos::updateJoystick(const sensor_msgs::Joy::ConstPtr &joy_msg) {
     
     if (joy_msg->buttons.size()>0 && joy_msg->buttons[0]) {
