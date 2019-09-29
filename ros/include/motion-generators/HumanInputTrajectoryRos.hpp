@@ -34,6 +34,8 @@ namespace motion_generators {
 
             void updateJoystick(const sensor_msgs::Joy::ConstPtr &joy_msg);
 
+            void sigmaCallback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg);
+
         private:
             parameter_handler::Parameter<double> maxVel, maxDistance, transitionTime;
 
@@ -43,6 +45,7 @@ namespace motion_generators {
             std::string name;
 
             parameter_handler::Parameter<int> swing_leg;
+            parameter_handler::Parameter<bool> use_sigma_haptic_;
 
             ros::Subscriber joystick_sub;
             ros::Publisher outputPose_pub;
@@ -55,6 +58,14 @@ namespace motion_generators {
             double timeAccum;
             bool enable;
             std::mutex desLock;
+            // TODO remove this hardcoded boolean param (config file, priorities topic checks, ...)
+            // enjoy Josh :)
+            // bool use_sigma_haptic_ = 1;
+            ros::Subscriber sigma_sub_;
+            double sigma_time_;
+            double sigma_timeout_ = 0.05;
+            Eigen::Matrix<double, 7, 1> current_pose_sigma_, desired_pose_sigma_;
+            int orientation_control_old_;
         };
     }
 }

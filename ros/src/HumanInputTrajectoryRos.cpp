@@ -23,6 +23,10 @@ HumanInputTrajectoryRos::HumanInputTrajectoryRos(std::string const &name, ros::N
 void HumanInputTrajectoryRos::prepareRos(ros::NodeHandle &nh) {
     joystick_sub = nh.subscribe("/HIT/" + name + "/joy_update", 1, &HumanInputTrajectoryRos::updateJoystick, this);
     outputPose_pub = nh.advertise<geometry_msgs::PoseStamped>("/HIT/" + name + "/output_pose", 1);
+    // if(use_sigma_haptic_)
+    std::cout<<"PREPARING ROS"<<std::endl;
+    sigma_sub_= nh.subscribe("/pose_sigma_x",1,&HumanInputTrajectoryRos::sigmaCallback,this);
+
 }
 
 void HumanInputTrajectoryRos::update(double dt) {
@@ -67,6 +71,7 @@ void HumanInputTrajectoryRos::update(double dt) {
         desiredPose.pose.orientation.x = -rotation.x();
         desiredPose.pose.orientation.y = -rotation.y();
         desiredPose.pose.orientation.z = -rotation.z();
+        if(!use_sigma_haptic_.getValue())
         outputPose_pub.publish(desiredPose);
         
     }
@@ -96,7 +101,7 @@ void HumanInputTrajectoryRos::updateJoystick(const sensor_msgs::Joy::ConstPtr &j
         enable = false;
     }
     
-    if (enable && joy_msg->axes.size()>=6) {
+    if (enable && !use_sigma_haptic_.getValue() && joy_msg->axes.size()>=6) {
         std::lock_guard<std::mutex> guard(desLock);
         desiredPose[0] += joy_msg->axes[0] * maxVel.getValue();
         desiredPose[1] += joy_msg->axes[1] * maxVel.getValue();
@@ -123,8 +128,68 @@ Eigen::Quaterniond quat_dot(0,axes[0] * maxVel.getValue(),axes[1] * maxVel.getVa
     }
 }
 
+void HumanInputTrajectoryRos::sigmaCallback(const geometry_msgs::PoseStamped::ConstPtr & pose_msg){
+    if(use_sigma_haptic_.getValue()){
+    double msg_time = (double)pose_msg->header.stamp.sec + 1e-9*(double)pose_msg->header.stamp.nsec,
+           msg_timeout = msg_time - sigma_time_;
+           sigma_time_ = msg_time;
+    // TODO make the topic name flexible through a config maybe?
+    int orientation_control = 0;
+    ros::param::get("/HQP_topic_name", orientation_control);
+
+    if((currentPose.head(3).isZero() && currentPose.tail(3).isZero() && currentPose[3] == 1) ||//has not been initialized
+        msg_timeout >= sigma_timeout_ ||// timeout
+        orientation_control != orientation_control_old_){
+
+        reset();
+
+        std::lock_guard<std::mutex> guard(desLock);
+        //current_pose_sigma_.head<3>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getPositionWorldToEndEffectorInWorldFrame().vector();
+        //current_pose_sigma_.tail<4>() = model->getLimbsPtr()->getPtr(swing_leg.getValue())->getEndEffectorPtr()->getStateMeasuredPtr()->getOrientationWorldToEndEffector().vector();
+        //current_pose_sigma_.tail<3>() = -current_pose_sigma_.tail<3>();
+        current_pose_sigma_=currentPose;
+        enable = false;
+    } else {
+        enable = true;
+
+        std::lock_guard<std::mutex> guard(desLock);
+
+        desiredPose[0] = current_pose_sigma_[0] + pose_msg->pose.position.x;
+        desiredPose[1] = current_pose_sigma_[1] + pose_msg->pose.position.y;
+        desiredPose[2] = current_pose_sigma_[2] + pose_msg->pose.position.z;
+//                Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
+//                Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.z, pose_msg->pose.orientation.y,pose_msg->pose.orientation.x);
+//
+//            quat_dot = (quat*quat_dot);
+//            std::cout<<"New des orientation is "<< quat_dot.w()<<", "<<quat_dot.x()<<", "<<quat_dot.y()<<", "<<quat_dot.z()<<std::endl;
+        if(orientation_control == 1){
+            Eigen::Quaterniond quat(current_pose_sigma_[3],current_pose_sigma_[4],current_pose_sigma_[5],current_pose_sigma_[6]);
+//          Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.x, pose_msg->pose.orientation.y, pose_msg->pose.orientation.z);
+            Eigen::Quaterniond quat_dot(pose_msg->pose.orientation.w , pose_msg->pose.orientation.z, pose_msg->pose.orientation.y, pose_msg->pose.orientation.x);
+
+            quat_dot = (quat*quat_dot);
+//            quat_dot.coeffs()*=0.5;
+
+            //quat_dot.normalize();
+
+            desiredPose[3] = quat_dot.w();
+            desiredPose[4] = quat_dot.x();
+            desiredPose[5] = quat_dot.y();
+            desiredPose[6] = quat_dot.z();
+
+            ROS_WARN_COND(false, "New des orientation is [%4.2f, %4.2f, %4.2f, %4.2f]", desiredPose[3], desiredPose[4], desiredPose[5], desiredPose[6]);
+        }
+    }
+
+    orientation_control_old_ = orientation_control;
+}
+}
+
 bool HumanInputTrajectoryRos::addParametersToHandler(const std::string &ns) {
     if (!parameter_handler::handler->addParam(ns + "/HIT/" + name + "/Leg", swing_leg) || !parameter_handler::handler->addParam(ns + "/HIT/" + name + "/maxVel", maxVel) || !parameter_handler::handler->addParam(ns + "/HIT/" + name + "/maxDistance", maxDistance) || !parameter_handler::handler->addParam(ns + "/HIT/" + name + "/transitionTime", transitionTime)) {
+        return false;
+    }
+    if (!parameter_handler::handler->addParam(ns + "/HIT/" + name + "/UseSigma", use_sigma_haptic_)) {
         return false;
     }
     return true;
