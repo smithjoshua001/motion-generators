@@ -11,11 +11,13 @@ private:
     double eta;
     bool finish;
 public:
-    ModifiedFourierTrajectoryOrocos(std::string name) : JointTrajectoryOrocos(name, std::make_shared < ModifiedFourierTrajectory<float> >()) {
+    ModifiedFourierTrajectoryOrocos(std::string name) : JointTrajectoryOrocos(name, std::shared_ptr< ModifiedFourierTrajectory<float> >(new  ModifiedFourierTrajectory<float>())) {
         // trajectory_mft=this->trajectory
         finish = false;
         eta = 0.001;
     }
+    ~ModifiedFourierTrajectoryOrocos() {}
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     bool startHook() {
         start_time = CosimaUtilities::getCurrentTime();
         return JointTrajectoryOrocos::startHook();
@@ -47,10 +49,12 @@ private:
     bool first_config;
 
 public:
-    JointDynamicAttractorOrocos(std::string name) : trajectory_jda(std::make_shared < JointDynamicAttractor<float> >()),
+    JointDynamicAttractorOrocos(std::string name) : trajectory_jda(std::shared_ptr < JointDynamicAttractor<float> >(new JointDynamicAttractor<float>())),
         JointTrajectoryOrocos(name, trajectory_jda) {
         this->addProperty("finished", trajectory_jda->finished);
     }
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     bool preparePorts() {
         bool out = JointTrajectoryOrocos::preparePorts();
         in_robot_var = rstrt::robot::JointState(trajectory_jda->getDof());

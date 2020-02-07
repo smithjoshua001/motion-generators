@@ -219,16 +219,16 @@ class ModifiedFourierTrajectoryOptimzer(OptimizerBase.OptimizerBase):
 
         for j in range(self.nf[0]):
             for i in range(self.dof):
-                if j == 0:
-                    opt_prob.addVar('a{}_{}'.format(
-                        i, j), 'c', value=self.config['trajectoryCoeffInit'][i], lower=self.amin, upper=self.amax)
-                else:
-                    opt_prob.addVar('a{}_{}'.format(
-                        i, j), 'c', value=(random.uniform(self.amin, self.amax))*0, lower=self.amin, upper=self.amax)
+                # if j == 0:
+                #     opt_prob.addVar('a{}_{}'.format(
+                #         i, j), 'c', value=self.config['trajectoryCoeffInit'][i], lower=self.amin, upper=self.amax)
+                # else:
+                opt_prob.addVar('a{}_{}'.format(
+                    i, j), 'c', value=(random.uniform(self.amin, self.amax)), lower=self.amin, upper=self.amax)
         for j in range(self.nf[0]):
             for i in range(self.dof):
                 opt_prob.addVar('b{}_{}'.format(
-                    j, i), 'c', value=(random.uniform(self.bmin, self.bmax))*0, lower=self.bmin, upper=self.bmax)
+                    j, i), 'c', value=(random.uniform(self.bmin, self.bmax)), lower=self.bmin, upper=self.bmax)
 
         # add constraint vars (constraint functions are in obfunc)
         opt_prob.addConGroup('g', self.num_constraints,
