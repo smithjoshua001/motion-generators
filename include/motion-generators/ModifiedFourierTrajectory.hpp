@@ -12,13 +12,9 @@
 #include <rapidjson/prettywriter.h>
 
 template <typename T> class ModifiedFourierTrajectory : public JointTrajectory<T> {
-// public:
-//     typedef std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>,Eigen::aligned_allocator<Eigen::Matrix<T,Eigen::Dynamic,1>>> vector_aa;
 private:
     T global_pulsation;
     size_t fourier_coeff_number;
-    // vector_aa fourier_coeff_a;
-    // vector_aa fourier_coeff_b;
     Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> fourier_coeff_a, fourier_coeff_b;
     Eigen::Matrix<T, Eigen::Dynamic, 6> poly_coeff;
     Eigen::Matrix<T, Eigen::Dynamic, 1> qinit;
@@ -30,8 +26,11 @@ private:
     T tf;
     size_t number_of_parameters;
 public:
-    ModifiedFourierTrajectory() : JointTrajectory<T>() {}
-    ModifiedFourierTrajectory(size_t dof) : ModifiedFourierTrajectory<T>(dof, 4) {}
+    ModifiedFourierTrajectory() : JointTrajectory<T>() {
+        gen = std::mt19937(rd());
+        real_dist = std::uniform_real_distribution<T>(0, std::nextafter(1, std::numeric_limits<T>::max()));
+    }
+    ModifiedFourierTrajectory(size_t dof) : ModifiedFourierTrajectory<T>(dof, 6) {}
     ModifiedFourierTrajectory(size_t dof, size_t coeff_num) : JointTrajectory<T>(dof) {
         gen = std::mt19937(rd());
         real_dist = std::uniform_real_distribution<T>(0, std::nextafter(1, std::numeric_limits<T>::max()));
@@ -52,7 +51,10 @@ public:
         convert_to_coeffcients();
         number_of_parameters = fourier_coeff_number * dof * 2 + 1;
     }
+
     ~ModifiedFourierTrajectory() override {}
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     void convert_to_coeffcients() {
         poly_coeff.setZero();
@@ -95,47 +97,6 @@ public:
                                   + 6 * fourier_coeff_b.col(i) * tf * global_pulsation * sin(j * tf * global_pulsation)) / (2 * std::pow(tf, 5) * global_pulsation);
         }
     }
-
-    // Eigen::Matrix<T, Eigen::Dynamic, 1> const &getPosition(double time = 0) override {
-    //     assert(this->runnable);
-    //     this->position.setZero();
-    //     for (size_t j = 1; j <= fourier_coeff_number; j++) {
-    //         this->position += (fourier_coeff_a.col(j - 1) / (global_pulsation * j)) * std::sin(global_pulsation * j * time) -
-    //                           (fourier_coeff_b.col(j - 1) / (global_pulsation * j)) * std::cos(global_pulsation * j * time);
-    //     }
-    //     for (size_t k = 0; k < 6; k++) {
-    //         this->position += poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k);
-    //     }
-    //     return this->position;
-    // }
-    // Eigen::Matrix<T, Eigen::Dynamic, 1> const &getVelocity(double time = 0) override {
-    //     assert(this->runnable);
-    //     this->velocity.setZero();
-    //     for (size_t i = 0; i < this->dof; i++) {
-    //         for (size_t j = 1; j <= fourier_coeff_number; j++) {
-    //             this->velocity[i] += (fourier_coeff_a(i, j - 1)) * std::cos(global_pulsation * j * time) +
-    //                                  (fourier_coeff_b(i, j - 1)) * std::sin(global_pulsation * j * time);
-    //         }
-    //     }
-    //     for (size_t k = 1; k < 6; k++) {
-    //         this->velocity += k * poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k - 1);
-    //     }
-    //     return this->velocity;
-    // }
-    // Eigen::Matrix<T, Eigen::Dynamic, 1> const &getAcceleration(double time = 0) override {
-    //     assert(this->runnable);
-    //     this->acceleration.setZero();
-    //     for (size_t i = 0; i < this->dof; i++) {
-    //         for (size_t j = 1; j <= fourier_coeff_number; j++) {
-    //             this->acceleration[i] += -(fourier_coeff_a(i, j - 1) * (global_pulsation * j)) * std::sin(global_pulsation * j * time) +
-    //                                      (fourier_coeff_b(i, j - 1) * (global_pulsation * j)) * std::cos(global_pulsation * j * time);
-    //         }
-    //     }
-    //     for (size_t k = 2; k < 6; k++) {
-    //         this->acceleration += (k - 1) * k * poly_coeff.col(k) * std::pow(time - (std::ceil(time / tf) - 1) * tf, k - 2);
-    //     }
-    //     return this->acceleration;
-    // }
     void update(double time = 0) override {
         assert(this->runnable);
         this->position.setZero();
@@ -169,6 +130,7 @@ public:
     }
     void setGlobalPulsation(T global_pulse) {
         global_pulsation = global_pulse;
+        tf = twopi / global_pulsation;
     }
     void setCoefficentNumbers(size_t fourier_coeff_number) {
         this->fourier_coeff_number = fourier_coeff_number;
@@ -203,52 +165,21 @@ public:
 
     void loadFromJSON(std::string filename) override {
         JointTrajectory<T>::loadFromJSON(filename);
-        // std::cout << "LOAD" << std::endl;
-        // rapidjson::Document doc;
-        // std::cout << "LOAD 1" << std::endl;
-        // global_pulsation = T(doc["frequency"].GetDouble());
-        // this->dof = T(doc["dof"].GetInt());
-        // std::cout << "LOAD2 " << this->dof << std::endl;
-        // this->JointTrajectory<T>::setDof(this->dof);
-
-        // std::cout << "LOAD3" << std::endl;
-        // fourier_coeff_number = doc["coefficient_number"].GetInt();
-        // std::cout << "LOAD4" << std::endl;
-        // fourier_coeff_a.resize(this->dof, fourier_coeff_number);
-        // fourier_coeff_b.resize(this->dof, fourier_coeff_number);
-        // for (int j = 0; j < this->dof; j++) {
-        //     for (int i = 0; i < fourier_coeff_number; i++) {
-        //         fourier_coeff_a(j, i) = T(doc["coefficient_a"][i + j * fourier_coeff_number].GetDouble());
-        //         fourier_coeff_b(j, i) = T(doc["coefficient_b"][i + j * fourier_coeff_number ].GetDouble());
-        //     }
-        // }
-        // poly_coeff.resize(this->dof, 6);
-        // convert_to_coeffcients();
-        // number_of_parameters = fourier_coeff_number * this->dof * 2 + 1;
-        // this->runnable = true;
-        std::cout << "LOAD" << std::endl;
         global_pulsation = T(this->json["frequency"].number_value());
-        std::cout << "LOAD1 " << this->json["dof"].int_value() << std::endl;
         this->dof = this->json["dof"].int_value();
         qinit = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(this->dof);
         this->JointTrajectory<T>::setDof(this->dof);
-        std::cout << "LOAD2" << std::endl;
         fourier_coeff_number = this->json["coefficient_number"].int_value();
-        std::cout << "LOAD3" << std::endl;
         fourier_coeff_a.resize(this->dof, fourier_coeff_number);
         fourier_coeff_b.resize(this->dof, fourier_coeff_number);
-        std::cout << "LOAD4" << std::endl;
         for (int j = 0; j < this->dof; j++) {
             for (int i = 0; i < fourier_coeff_number; i++) {
                 fourier_coeff_a(j, i) = T(this->json["coefficient_a"][i + j * fourier_coeff_number].number_value());
                 fourier_coeff_b(j, i) = T(this->json["coefficient_b"][i + j * fourier_coeff_number ].number_value());
             }
         }
-        std::cout << "LOAD5" << std::endl;
         poly_coeff.resize(this->dof, 6);
-        std::cout << "LOAD6" << std::endl;
         convert_to_coeffcients();
-        std::cout << "LOAD7" << std::endl;
         number_of_parameters = fourier_coeff_number * this->dof * 2 + 1;
         this->runnable = true;
     }
@@ -278,7 +209,6 @@ public:
         rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
         writer.SetFormatOptions(rapidjson::PrettyFormatOptions::kFormatSingleLineArray);
         d.Accept(writer);
-        // writer.Flush();
         ofs.flush();
         ofs.close();
     }
@@ -301,7 +231,7 @@ public:
         std::cout << "\n";
         std::cout << "poly_coeffs: " << poly_coeff << "\n";
     }
-    T getPeriodLength() {
+    T getPeriodLength() override {
         return tf;
     }
 };

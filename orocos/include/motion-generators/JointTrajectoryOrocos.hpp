@@ -30,14 +30,16 @@ protected:
     RTT::OutputPort<rstrt::kinematics::JointAccelerations> out_acceleration_port;
     rstrt::kinematics::JointAccelerations out_acceleration_var;
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    JointTrajectoryOrocos(std::string name, const std::shared_ptr<JointTrajectory<float> > &trajectory) : RTT::TaskContext(name) {
+    JointTrajectoryOrocos(std::string name, const std::shared_ptr<JointTrajectory<float> > trajectory) : RTT::TaskContext(name) {
         this->trajectory = trajectory;
         this->addOperation("loadFromJSON", &JointTrajectoryOrocos::loadFromJSON, this);
     }
+
     virtual ~JointTrajectoryOrocos() {
         std::cout << "DESTROYING JTO!!" << std::endl;
     }
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     void loadFromJSON(std::string filename) {
         std::cout << "LOAD FROM JSON!" << std::endl;
@@ -52,26 +54,43 @@ public:
     }
 
     bool preparePorts() {
-        std::cout << "LOADING PORTS" << std::endl;
+        std::cout << "LOADING PORTS " << this->dof << std::endl;
+        // if (this->ports()->size() > 0) {
         this->ports()->clear();
+        // }
+        std::cout << "INIT OUTPUT VARS" << std::endl;
         out_position_var = rstrt::kinematics::JointAngles(dof);
-        out_velocity_var = rstrt::kinematics::JointVelocities(dof);
-        out_acceleration_var = rstrt::kinematics::JointAccelerations(dof);
+        // out_position_var.angles.resize(dof);
+        // out_position_var.angles.setZero();
 
+        // std::cout << "INIT OUTPUT VARS 1" << std::endl;
+        out_velocity_var = rstrt::kinematics::JointVelocities(dof);
+        // out_velocity_var.velocities.resize(dof);
+        // out_velocity_var.velocities.setZero();
+
+        // std::cout << "INIT OUTPUT VARS 2" << std::endl;
+        out_acceleration_var = rstrt::kinematics::JointAccelerations(dof);
+        // out_acceleration_var.accelerations.resize(dof);
+        // out_acceleration_var.accelerations.setZero();
+
+        // std::cout << "INIT OUTPUT PORTS 1" << std::endl;
         out_position_port.setName("out_position_port");
         out_position_port.doc("Output port for sending position values");
         out_position_port.setDataSample(out_position_var);
         this->ports()->addPort(out_position_port);
 
+        // std::cout << "INIT OUTPUT PORTS 2" << std::endl;
         out_velocity_port.setName("out_velocity_port");
         out_velocity_port.doc("Output port for sending velocity values");
         out_velocity_port.setDataSample(out_velocity_var);
         this->ports()->addPort(out_velocity_port);
 
+        // std::cout << "INIT OUTPUT PORTS 3" << std::endl;
         out_acceleration_port.setName("out_acceleration_port");
         out_acceleration_port.doc("Output port for sending acceleration values");
         out_acceleration_port.setDataSample(out_acceleration_var);
         this->ports()->addPort(out_acceleration_port);
+        std::cout << "LOADED PORTS!!" << std::endl;
         return true;
     }
 
