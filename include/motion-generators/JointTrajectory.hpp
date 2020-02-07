@@ -60,13 +60,11 @@ public:
         }
         return this->trajectory;
     }
-        
     size_t getDof() {
         return dof;
     }
 
     virtual void setDof(size_t dof) {
-
         this->dof = dof;
         this->position.resize(this->dof);
         this->velocity.resize(this->dof);

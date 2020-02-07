@@ -34,8 +34,8 @@ ${RapidJSON_INCLUDE_DIRS}
 ${RST-RT_INCLUDE_DIRS})
 
 list(APPEND DEPENDENCY_LIBRARIES ${OROCOS-RTT_LIBRARIES} ${OROCOS-RTT_RTT-SCRIPTING_LIBRARY} ${OROCOS-RTT_TYPEKIT_LIBRARIES} ${USE_OROCOS_LIBRARIES} ${RST-RT_LIBRARIES})
-message(STATUS "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-message(STATUS "${RapidJSON_INCLUDE_DIRS} ${RapidJSON_INCLUDE_DIR}")
+
+
 orocos_component(RTT_${CMAKE_PROJECT_NAME}
 ${PROJECT_SOURCE_DIR}/orocos/src/JointDynamicAttractorOrocos.cpp
 #${PROJECT_SOURCE_DIR}/orocos/src/TaskDynamicAttractor.cpp
