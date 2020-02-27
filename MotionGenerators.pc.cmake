@@ -6,7 +6,7 @@ Name: MotionGenerators
 Description: MotionGenerators
 URL: http://nothingyet/
 Version: @MotionGenerators_VERSION@
-Requires: eigen3
+Requires: eigen3 json11
 Conflicts:
 Libs:
 Libs.private:

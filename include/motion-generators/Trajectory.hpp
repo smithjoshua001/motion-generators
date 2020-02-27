@@ -1,6 +1,12 @@
 #pragma once
 #include <Eigen/Dense>
 #include <type_traits>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <streambuf>
+#include <iostream>
+#include <json11.hpp>
 
 template <typename T, int pos_dim = Eigen::Dynamic, int vel_dim = Eigen::Dynamic, int acc_dim = vel_dim> struct TrajectoryStorage {
     Eigen::Matrix<T, pos_dim, Eigen::Dynamic> pos;
@@ -11,7 +17,15 @@ template <typename T, int pos_dim = Eigen::Dynamic, int vel_dim = Eigen::Dynamic
         this->vel = vel;
         this->acc = acc;
     }
+    TrajectoryStorage(const TrajectoryStorage<T> &copy) {
+        pos = copy.pos;
+        vel = copy.vel;
+        acc = copy.acc;
+    }
     TrajectoryStorage() {}
+    ~TrajectoryStorage() {}
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 template <typename T, int pos_dim = Eigen::Dynamic, int vel_dim = Eigen::Dynamic, int acc_dim = Eigen::Dynamic> class Trajectory {
@@ -19,13 +33,23 @@ protected:
     Eigen::Matrix<T, pos_dim, 1> position;
     Eigen::Matrix<T, vel_dim, 1> velocity;
     Eigen::Matrix<T, acc_dim, 1> acceleration;
-    TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> trajectory;
+    std::shared_ptr<TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> > trajectory;
     bool runnable;
     json11::Json json;
 public:
 
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    Trajectory(const Trajectory<T, pos_dim, vel_dim, acc_dim> &copy) {
+        position = copy.position;
+        velocity = copy.velocity;
+        acceleration = copy.acceleration;
+        runnable = copy.runnable;
+        json = copy.json;
+        trajectory = std::shared_ptr<TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> >(new TrajectoryStorage<T, pos_dim, vel_dim, acc_dim>(*(copy.trajectory)));
+    }
     Trajectory() {
         runnable = false;
+        trajectory = std::shared_ptr<TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> >(new TrajectoryStorage<T, pos_dim, vel_dim, acc_dim>());
     }
 
     virtual ~Trajectory() {};
@@ -34,12 +58,16 @@ public:
     Eigen::Matrix<T, vel_dim, 1> const &getVelocity() {return velocity;}
     Eigen::Matrix<T, acc_dim, 1> const &getAcceleration() {return acceleration;}
 
-    T getPeriodLength() {return T(0);}
+    virtual T getPeriodLength() = 0;// {return T(0);}
 
-    virtual TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> simulate(T control_frequency) = 0;
+    virtual std::shared_ptr<TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> > simulate(T control_frequency) = 0;
 
     bool &getRunnable() {
         return runnable;
+    }
+
+    std::shared_ptr<TrajectoryStorage<T, pos_dim, vel_dim, acc_dim> > getTrajectoryStorage() {
+        return trajectory;
     }
 
     virtual void loadFromJSON(std::string filename) {

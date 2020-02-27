@@ -5,5 +5,5 @@
 
 class ModifiedFourierTrajectoryOrocos : public JointTrajectoryOrocos {
 public:
-    ModifiedFourierTrajectoryOrocos(std::string name) : JointTrajectoryOrocos(name, std::make_shared < ModifiedFourierTrajectory<float> >()) {}
+    ModifiedFourierTrajectoryOrocos(std::string name) : JointTrajectoryOrocos(name, std::shared_ptr< ModifiedFourierTrajectory<float> >(new ModifiedFourierTrajectory<float> ())) {}
 };
