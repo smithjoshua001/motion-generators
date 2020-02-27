@@ -1,4 +1,6 @@
 try:
+    import mpi4py
+    mpi4py.rc.recv_mprobe = False
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     nprocs = comm.Get_size()
@@ -49,23 +51,40 @@ class OptimizerBase(object):
             send_obj = [self.last_best_f, self.last_best_sol,
                         self.last_best_sol2, self.mpi_rank]
             received_objs = []
-            received_objs = self.comm.allgather(send_obj)
-            for proc in range(0, self.mpi_size):
-                other_best_f, other_best_sol, other_best_sol2, rank = received_objs[proc]
+            print self.mpi_rank, ": Waiting for all gather"
+            if all_update:
+                received_objs = self.comm.allgather(send_obj)
+            else:
+                received_objs = self.comm.gather(send_obj,root=0)
+            if(self.mpi_rank==0 or all_update):
+                print self.mpi_rank, ": done all gather"
+                for proc in range(0, self.mpi_size):
+                    other_best_f, other_best_sol, other_best_sol2, rank = received_objs[proc]
 
-                if (self.mpi_rank == 0 or self.last_best_f == float('Inf')) and other_best_f < self.last_best_f:
-                    print('received better solution from {}: {} {}'.format(
-                        rank, other_best_f, self.last_best_f))
-                    self.last_best_f = other_best_f
-                    self.last_best_sol = other_best_sol
-                    self.last_best_sol2 = other_best_sol2
-                    valid = True
-                elif other_best_f < self.last_best_f:
-                    valid = True
+                    # if (self.mpi_rank == 0 or self.last_best_f == float('Inf')) and other_best_f < self.last_best_f:
+                    #     print('received better solution from {}: {} {}'.format(
+                    #         rank, other_best_f, self.last_best_f))
+                    #     self.last_best_f = other_best_f
+                    #     self.last_best_sol = other_best_sol
+                    #     self.last_best_sol2 = other_best_sol2
+                    #     valid = True
+                    # elif other_best_f < self.last_best_f and self.last_best_f == float('Inf'):
+                    #     self.last_best_f = other_best_f
+                    #     self.last_best_sol = other_best_sol
+                    #     self.last_best_sol2 = other_best_sol2
+                    #     valid = True
+                    # elif other_best_f < self.last_best_f:
+                    #     valid = True 
+                    if other_best_f < self.last_best_f:
+                        self.last_best_f = other_best_f
+                        self.last_best_sol = other_best_sol
+                        self.last_best_sol2 = other_best_sol2
+                        valid = True
 
-            if self.last_best_f == float('Inf'):
-                print("No solution found!")
-                exit(-1)
+                if self.last_best_f == float('Inf'):
+                    print("No solution found!")
+                    self.comm.finalize()
+                    exit(-1)
 
     def globalOptimizer(self, opt_prob, initial):
         # optimize using pyOpt (global)
@@ -114,12 +133,13 @@ class OptimizerBase(object):
             opt.setOption('xinit', 0)
             # (self.mpi_rank+1)/self.mpi_size)
             opt.setOption('seed', sr.random()*self.mpi_size)
-            opt.setOption('itol', 1e-4)
-            #opt.setOption('PrintOut', 0)
+            opt.setOption('itol', self.config['minTolConstr'])
+            # opt.setOption('PrintOut', 0)
+            opt.setOption('fileout', 0)
             # opt.setOption('vinit', 0.5)
             # opt.setOption('vmax', 1.0)
 
-            opt.setOption('vcrazy', 1e-5)
+            opt.setOption('vcrazy', 1e-4)
             # TODO: how to properly limit max number of function calls?
             # no. func calls = (SwarmSize * inner) * outer + SwarmSize
             self.iter_max = opt.getOption('SwarmSize') * opt.getOption('maxInnerIter') * \
@@ -128,6 +148,8 @@ class OptimizerBase(object):
         else:
             print("Solver {} not defined".format(
                 self.config['globalSolver']))
+            
+            self.comm.finalize()
             exit(1)
 
         # run global optimization
@@ -143,12 +165,16 @@ class OptimizerBase(object):
         self.is_global = True
         import time
         # time.sleep(30)
+        # try:
         opt(opt_prob, store_hst=False, xstart=np.matrix(initial))
-
+        # except:
+        #     print "GLOBAL FAIL?"
         if self.mpi_rank == 0:
             print(opt_prob.solution(0))
-
-        self.gather_solutions()
+        print "GATHERING GLOBAL:", self.mpi_rank 
+        self.gather_solutions(all_update=True)
+        print "GATHERED GLOBAL:", self.mpi_rank 
+        self.comm.barrier()
 
     def localOptimizer(self, opt_prob):
         # TODO: run local optimization for e.g. the three last best results (global solutions
@@ -157,10 +183,14 @@ class OptimizerBase(object):
             # after using global optimization, refine solution with gradient based method init
             # optimizer (more or less local)
         if self.config['localSolver'] == 'SLSQP':
+            # if parallel:
+            #     opt2 = pyOpt.SLSQP(pll_type='POA')
+            # else:
             opt2 = pyOpt.SLSQP()  # sequential least squares
             opt2.setOption('MAXIT', self.config['localOptIterations'])
+            opt2.setOption('IPRINT',0)
             if self.config['verbose']:
-                opt2.setOption('IPRINT', 0)
+                opt2.setOption('IPRINT',0)
         elif self.config['localSolver'] == 'IPOPT':
             opt2 = pyOpt.IPOPT()
             # mumps or hsl: ma27, ma57, ma77, ma86, ma97 or mkl: pardiso
@@ -176,19 +206,22 @@ class OptimizerBase(object):
             opt2.setOption('MIT', self.config['localOptIterations'])
             # opt2.setOption('MFV', ??) # max function evaluations
         elif self.config['localSolver'] == 'COBYLA':
-            if parallel:
-                opt2 = pyOpt.COBYLA(pll_type='POA')
-            else:
-                opt2 = pyOpt.COBYLA()
+            # if parallel:
+            #     opt2 = pyOpt.COBYLA(pll_type='POA')
+            # else:
+            opt2 = pyOpt.COBYLA()
             # max iterations
             opt2.setOption('MAXFUN', self.config['localOptIterations'])
-            opt2.setOption('RHOBEG', 0.1)  # initial step size
+            opt2.setOption('RHOBEG', 0.01)  # initial step size
             if self.config['verbose']:
                 opt2.setOption('IPRINT', 2)
 
         self.iter_max = self.local_iter_max
         #opt2.setOption('PrintOut', 0)
         # use best constrained solution from last run (might be better than what solver thinks)
+        global_sol2 = self.last_best_sol2
+        global_f = self.last_best_f
+        global_sol = self.last_best_sol
         if len(self.last_best_sol2) > 0:
             for i in range(len(opt_prob.getVarSet())):
                 opt_prob.getVar(i).value = self.last_best_sol2[i]
@@ -197,23 +230,35 @@ class OptimizerBase(object):
             print('Runing local optimization with {}'.format(
                 self.config['localSolver']))
         self.is_global = False
-        if self.config['localSolver'] in ['COBYLA', 'CONMIN']:
-            opt2(opt_prob, store_hst=False)
-        else:
-            if parallel:
-                opt2(opt_prob, sens_step=1e-6,
-                     sens_mode='pgc', store_hst=False)
-            else:
-                opt2(opt_prob, sens_step=1e-6, store_hst=False)
+        print "RUNNING LOCAL:", self.mpi_rank
+        self.comm.barrier()
+        try:
+            # if self.config['localSolver'] in ['COBYLA', 'CONMIN']:
+            #     opt2(opt_prob, store_hst=False)
+            # else:
+            # if parallel:
+            #     opt2(opt_prob, sens_step=1e-6,
+            #             sens_mode='pgc', store_hst=False)
+            # else:
+            opt2(opt_prob, sens_step=1e-6, store_hst=False)
+        except:
+            print "LOCAL FAILED REVERTING TO GLOBAL"
+            self.last_best_sol2= global_sol2
+            self.last_best_f = global_f
+            self.last_best_sol = global_sol
         print "GATHERING SOLUTIONS"
-        self.gather_solutions()
+        self.gather_solutions(all_update=False)
         print "FINISHED GATHERING SOLUTIONS"
+        self.comm.barrier()
 
     def runOptimizer(self, opt_prob):
+        # try:
         # type: (pyOpt.Optimization) -> np._ArrayLike[float]
         ''' call global followed by local optimizer, return solution '''
 
         import pyOpt
+        # import deep_copy
+        # opt_prob2 = deep_copy(opt_prob)
 
         initial = [v.value for v in list(opt_prob.getVarSet().values())]
         inittemp = []
@@ -225,13 +270,17 @@ class OptimizerBase(object):
         if self.config['useGlobalOptimization']:
             self.globalOptimizer(opt_prob, inittemp)
             # pyOpt local
-
+        
+        if(self.mpi_rank==0):
+            self.TrajModel.setFromParameters(np.array(self.last_best_sol))
+            self.TrajModel.saveToJSON("traj-global.json")
+        # self.opt_prob = opt_prob2
         if self.config['useLocalOptimization']:
             # print("Runnning local gradient based solver")
             self.localOptimizer(opt_prob)
 
         if self.mpi_rank == 0:
-            sol = opt_prob.solution(0)
+            sol = opt_prob.solution(1)
             # print(sol)
             # print opt_prob.getSolSet()
             # sol_vec = np.array([sol.getVar(x).value for x in range(0,len(sol.getVarSet()))])
@@ -246,8 +295,15 @@ class OptimizerBase(object):
                 # print("\n")
                 return self.last_best_sol
             else:
-                print("No feasible solution found!")
+                print("No feasible solution found!")  
+                MPI.Finalize()
                 exit(-1)
         else:
-            # parallel sub-processes, close
+            # # parallel sub-processes, close
+            print "CLOSING 1"
             exit(0)
+        # finally:
+        #     # if self.mpi_rank == 0:
+        #     print "CLOSING 2"
+        #     MPI.Finalize()
+        #     exit(0)

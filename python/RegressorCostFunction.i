@@ -1,4 +1,4 @@
-%module RegressorCostFunction
+%module(directors="1") RegressorCostFunction
 %{
     #define SWIG_FILE_WITH_INIT
     #include <motion-generators/RegressorCostFunction.hpp>
